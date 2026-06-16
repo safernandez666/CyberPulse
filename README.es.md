@@ -5,12 +5,12 @@
 <h1 align="center">CyberPulse</h1>
 
 <p align="center">
-  <strong>Cybersecurity news aggregator with a LinkedIn post generator.</strong><br>
-  Consumes 100+ RSS feeds, classifies articles by severity/category, and generates publication-ready content.
+  <strong>Agregador de noticias de ciberseguridad con generador de posts para LinkedIn.</strong><br>
+  Consume más de 100 fuentes RSS, clasifica artículos por severidad/categoría y genera contenido listo para publicar.
 </p>
 
 <p align="center">
-  <a href="README.es.md">🇪🇸 Leer en castellano</a>
+  <a href="README.md">🇬🇧 Read in English</a>
 </p>
 
 <p align="center">
@@ -22,33 +22,33 @@
 
 ---
 
-## What is CyberPulse?
+## ¿Qué hace CyberPulse?
 
-CyberPulse is a productivity tool for cybersecurity professionals who need to stay current and share relevant content on LinkedIn.
+CyberPulse es una herramienta productiva para profesionales de ciberseguridad que necesitan estar al día y compartir contenido relevante en LinkedIn.
 
-- **Collects** news from 100+ cybersecurity RSS feeds.
-- **Classifies** each article by category (`VULNERABILITY`, `MALWARE`, `THREAT INTEL`, etc.) and severity (`critical`, `high`, `medium`, `low`).
-- **Generates LinkedIn posts** in multiple formats and tones, with real bold text (HTML).
-- **Supports AI generation**: connect your OpenAI-compatible provider (OpenAI, Groq, etc.) from the UI; falls back to local templates on failure.
-- **Exposes a REST API and an MCP endpoint** for integration with AI agents like Hermes or OpenClaw.
-- **Runs 100 % locally** with SQLite and Docker.
+- **Recopila** noticias de más de 100 fuentes RSS de ciberseguridad.
+- **Clasifica** cada artículo por categoría (`VULNERABILITY`, `MALWARE`, `THREAT INTEL`, etc.) y severidad (`critical`, `high`, `medium`, `low`).
+- **Genera posts** para LinkedIn en varios formatos y tonos, con negritas reales (HTML).
+- **Soporta IA**: conecta tu proveedor OpenAI-compatible (OpenAI, Groq, etc.) para generar posts personalizados; si falla, usa plantillas locales.
+- **Expone una API REST y un endpoint MCP** para integrarlo con agentes de IA como Hermes u OpenClaw.
+- **Funciona 100 % local** con SQLite y Docker.
 
 ---
 
 ## Features
 
-- 📰 **100+ built-in RSS feeds**.
-- 🔥 **News feed** with filters by category, source, search, and sorting by date, severity or *trending*.
-- ✍️ **Post generator** with 5 tones, 6 formats, and EN/ES support.
-- 🤖 **AI generation** configurable from the UI (API key, model, base URL).
-- ⚙️ **Custom RSS sources** from the web interface.
-- 🔑 **Optional API key** to protect sensitive endpoints.
-- 🐳 **One-command Docker deploy**.
-- 📊 **Stats, health checks, and logs** built in.
+- 📰 **Más de 100 fuentes RSS** activas por defecto.
+- 🔥 **Feed de noticias** con filtros por categoría, fuente, búsqueda y ordenamiento por fecha, severidad o *trending*.
+- ✍️ **Generador de posts** con 5 tonos, 6 formatos y soporte EN/ES.
+- 🤖 **Generación con IA** configurable desde la UI (API key, modelo, base URL).
+- ⚙️ **Fuentes RSS personalizadas** desde la interfaz web.
+- 🔑 **API key opcional** para proteger endpoints sensibles.
+- 🐳 **Deploy con Docker** en un solo comando.
+- 📊 **Estadísticas, health checks y logs** integrados.
 
 ---
 
-## Quick start with Docker
+## Quick start con Docker
 
 ```bash
 git clone https://github.com/safernandez666/CyberPulse.git
@@ -56,34 +56,34 @@ cd CyberPulse/app
 docker compose up -d --build
 ```
 
-Open http://localhost:3001 in your browser.
+Abre http://localhost:3001 en tu navegador.
 
-> After rebuilding, use **Ctrl + F5** or an incognito window to avoid the browser showing a cached frontend.
+> Si acabas de reconstruir, usa **Ctrl + F5** o una ventana de incógnito para evitar que el navegador muestre la versión anterior del frontend.
 
-Useful commands:
+Comandos útiles:
 
 ```bash
-# Check status
+# Ver estado
 docker compose ps
 
-# View logs
+# Ver logs
 docker compose logs -f
 
-# Force a manual scrape
+# Forzar scraping manual
 curl -X POST http://localhost:3001/api/scrape
 
-# List active sources
+# Ver fuentes activas
 curl http://localhost:3001/api/sources
 
-# Stop
+# Detener
 docker compose down
 ```
 
 ---
 
-## Running without Docker
+## Uso sin Docker
 
-Requirements: Node.js 20+ and npm 10+.
+Requisitos: Node.js 20+ y npm 10+.
 
 ```bash
 cd CyberPulse/app
@@ -93,103 +93,103 @@ npm run server
 ```
 
 - App: http://localhost:3001
-- SQLite database is created at `./data/cyberpulse.db`.
+- La base de datos SQLite se crea en `./data/cyberpulse.db`.
 
 ---
 
-## How to add RSS sources
+## Cómo agregar fuentes RSS
 
-There are three ways to add a new source.
+Hay tres formas de agregar una nueva fuente.
 
-### Option 1: From the web UI (recommended)
+### Opción 1: Desde la interfaz web (recomendado)
 
-1. Open CyberPulse and click **Settings** (gear icon).
-2. Go to the **Custom RSS Sources** section.
-3. Fill in:
-   - **Name**: display name of the source.
-   - **RSS feed URL**: e.g. `https://my-source.com/feed.xml`.
-   - **Category**: one of the existing categories (see list below).
-4. Click **Add source**.
-5. If you protected the backend with `CYBERPULSE_API_KEY`, enter the **CyberPulse API Key** as well.
+1. Abre CyberPulse y haz clic en **Configuración** (icono de engranaje).
+2. Ve a la sección **Fuentes RSS personalizadas**.
+3. Completa:
+   - **Nombre**: el nombre visible de la fuente.
+   - **URL del feed RSS**: ej. `https://mi-fuente.com/feed.xml`.
+   - **Categoría**: una de las categorías existentes (ver lista más abajo).
+4. Haz clic en **Agregar fuente**.
+5. Opcionalmente, introduce la **CyberPulse API Key** si protegiste el backend con `CYBERPULSE_API_KEY`.
 
-The new source is scraped in the next automatic cycle (every 15 minutes) or you can force it:
+La nueva fuente se scrapea en el próximo ciclo automático (cada 15 minutos) o puedes forzarlo:
 
 ```bash
 curl -X POST http://localhost:3001/api/scrape
 ```
 
-### Option 2: Via the REST API
+### Opción 2: Mediante la API REST
 
 ```bash
-# Without API key
+# Sin API key configurada
 curl -X POST http://localhost:3001/api/sources \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My New Source",
-    "rssUrl": "https://my-source.com/feed.xml",
+    "name": "Mi Nueva Fuente",
+    "rssUrl": "https://mi-fuente.com/feed.xml",
     "category": "THREAT INTEL"
   }'
 
-# With API key configured
+# Con API key configurada
 curl -X POST http://localhost:3001/api/sources \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-secret-key" \
+  -H "X-API-Key: tu-clave-secreta" \
   -d '{
-    "name": "My New Source",
-    "rssUrl": "https://my-source.com/feed.xml",
+    "name": "Mi Nueva Fuente",
+    "rssUrl": "https://mi-fuente.com/feed.xml",
     "category": "THREAT INTEL"
   }'
 ```
 
-### Option 3: Edit the code
+### Opción 3: Editar el código
 
-1. Open `app/server/seeds.ts`.
-2. Add an entry to the `RSS_SOURCES` array:
+1. Abre `app/server/seeds.ts`.
+2. Agrega una entrada al array `RSS_SOURCES`:
 
 ```typescript
 {
-  name: 'My New Source',
-  rssUrl: 'https://my-source.com/feed.xml',
+  name: 'Mi Nueva Fuente',
+  rssUrl: 'https://mi-fuente.com/feed.xml',
   category: 'THREAT INTEL'
 }
 ```
 
-3. Rebuild the container:
+3. Reconstruye el contenedor:
 
 ```bash
 docker compose down
 docker compose up -d --build
 ```
 
-### Available categories
+### Categorías disponibles
 
-| Category | Typical use |
-|----------|-------------|
-| `VULNERABILITY` | Vulnerabilities, patches, advisories |
-| `MALWARE` | Malware, ransomware, sample analysis |
-| `THREAT INTEL` | Threat intelligence, actor reports |
-| `DATA BREACH` | Data leaks, breaches |
-| `PHISHING` | Phishing campaigns |
-| `COMPLIANCE` | Regulatory compliance |
-| `RESEARCH` | Security research |
-| `PRIVACY` | Privacy |
-| `POLICY` | Government policy |
-| `INDUSTRY` | Industry news |
-| `ALERT` | CERT/CISA/NCSC alerts |
-| `AWARENESS` | Security awareness |
+| Categoría | Uso típico |
+|-----------|------------|
+| `VULNERABILITY` | Vulnerabilidades, parches, advisories |
+| `MALWARE` | Malware, ransomware, análisis de muestras |
+| `THREAT INTEL` | Inteligencia de amenazas, reportes de actores |
+| `DATA BREACH` | Filtraciones de datos, breaches |
+| `PHISHING` | Campañas de phishing, engaños |
+| `COMPLIANCE` | Cumplimiento normativo |
+| `RESEARCH` | Investigación de seguridad |
+| `PRIVACY` | Privacidad |
+| `POLICY` | Políticas gubernamentales |
+| `INDUSTRY` | Noticias de la industria |
+| `ALERT` | Alertas de CERT/CISA/NCSC |
+| `AWARENESS` | Concientización |
 | `EXPLOIT` | Exploits, PoC, zero-days |
-| `IOT` | IoT security |
-| `TECH` | Relevant general tech |
+| `IOT` | Seguridad IoT |
+| `TECH` | Tecnología general relevante |
 
 ---
 
-## Built-in RSS sources (104 sources)
+## Fuentes RSS incluidas (104 fuentes)
 
-CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasionally fail due to network issues, blocks, or outdated feeds, but working sources stay active.
+CyberPulse viene configurado con más de 100 fuentes de ciberseguridad. Algunas pueden fallar ocasionalmente por problemas de red, bloqueos o feeds desactualizados, pero las fuentes funcionales se mantienen activas.
 
 ### ALERT
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | ASD ACSC Alerts | https://www.cyber.gov.au/rss/alerts |
 | CERT-EU | https://cert.europa.eu/publications/newsletter%20RSS |
@@ -203,26 +203,26 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### AWARENESS
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | OSI | https://www.osi.es/feed/actualidad |
 
 ### COMPLIANCE
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Dark Reading | https://www.darkreading.com/rss.xml |
 
 ### DATA BREACH
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | The Record | https://therecord.media/feed/ |
 | Troy Hunt | https://www.troyhunt.com/rss/ |
 
 ### EXPLOIT
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Exploit-DB | https://www.exploit-db.com/rss.xml |
 | Packet Storm | https://rss.packetstormsecurity.com/files/ |
@@ -232,7 +232,7 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### INDUSTRY
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Cybersecurity Dive | https://www.cybersecuritydive.com/feeds/news/ |
 | Infosecurity Magazine | http://www.infosecurity-magazine.com/rss/news/ |
@@ -240,13 +240,13 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### IOT
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Attify Blog | https://blog.attify.com/rss/ |
 
 ### MALWARE
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Bitdefender | https://www.bitdefender.com/blog/hotforsecurity/feed/ |
 | Elastic Security Labs | https://www.elastic.co/security-labs/rss/feed.xml |
@@ -260,13 +260,13 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### PHISHING
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Krebs on Security | https://krebsonsecurity.com/feed/ |
 
 ### POLICY
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | CyberScoop | https://cyberscoop.com/feed |
 | ENISA | https://www.enisa.europa.eu/rss/publications |
@@ -274,7 +274,7 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### RESEARCH
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Ars Technica Security | https://arstechnica.com/security/feed/ |
 | Google Online Security | https://feeds.feedburner.com/GoogleOnlineSecurityBlog |
@@ -289,13 +289,13 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### TECH
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Hacker News Frontpage | https://hnrss.org/frontpage |
 
 ### THREAT INTEL
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | 4hou | https://www.4hou.com/feed |
 | Anquanke | https://api.anquanke.com/data/v1/rss |
@@ -324,7 +324,7 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ### VULNERABILITY
 
-| Source | RSS URL |
+| Fuente | RSS URL |
 |--------|---------|
 | Apple Developer Releases | https://developer.apple.com/news/releases/rss/releases.rss |
 | Apple Newsroom | https://www.apple.com/newsroom/rss-feed.rss |
@@ -363,32 +363,32 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 ---
 
-## Repository structure
+## Estructura del repositorio
 
 ```
 CyberPulse/
-├── app/                  # Main application (React + Express + SQLite)
+├── app/                  # Aplicación principal (React + Express + SQLite)
 │   ├── src/              # Frontend
-│   ├── server/           # Backend and scraper
-│   ├── public/           # Logo and static assets
+│   ├── server/           # Backend y scraper
+│   ├── public/           # Logo y assets estáticos
 │   ├── docker-compose.yml
 │   ├── Dockerfile
-│   ├── API.md            # Full API documentation
-│   └── DOCKER.md         # Detailed Docker guide
-├── vscode-extension/     # VS Code extension for CyberPulse
-├── research/             # Architecture and content strategy docs
-└── README.md             # This file
+│   ├── API.md            # Documentación completa de la API
+│   └── DOCKER.md         # Guía detallada de Docker
+├── vscode-extension/     # Extensión de VS Code para CyberPulse
+├── research/             # Documentación de arquitectura y estrategia de contenido
+└── README.md             # Versión en inglés
 ```
 
 ---
 
-## Additional documentation
+## Documentación adicional
 
-- [`app/API.md`](app/API.md) – Complete REST and MCP endpoints.
-- [`app/DOCKER.md`](app/DOCKER.md) – Advanced Docker guide.
+- [`app/API.md`](app/API.md) – Endpoints REST y MCP completos.
+- [`app/DOCKER.md`](app/DOCKER.md) – Guía avanzada de Docker.
 
 ---
 
-## License
+## Licencia
 
 MIT © Santiago Fernández
