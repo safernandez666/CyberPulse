@@ -22,9 +22,28 @@
 
 ---
 
+## Table of Contents
+
+- [What is CyberPulse?](#what-is-cyberpulse)
+- [Features](#features)
+- [Quick start with Docker](#quick-start-with-docker)
+- [Running without Docker](#running-without-docker)
+- [How to add RSS sources](#how-to-add-rss-sources)
+- [Built-in RSS sources](#built-in-rss-sources-104-sources)
+- [Repository structure](#repository-structure)
+- [Additional documentation](#additional-documentation)
+- [Screenshots](#screenshots)
+- [License](#license)
+
+---
+
 ## What is CyberPulse?
 
 CyberPulse is a productivity tool for cybersecurity professionals who need to stay current and share relevant content on LinkedIn.
+
+<p align="center">
+  <img src=".github/screenshots/01-news-feed.png" width="90%" alt="CyberPulse news feed">
+</p>
 
 - **Collects** news from 100+ cybersecurity RSS feeds.
 - **Classifies** each article by category (`VULNERABILITY`, `MALWARE`, `THREAT INTEL`, etc.) and severity (`critical`, `high`, `medium`, `low`).
@@ -40,6 +59,11 @@ CyberPulse is a productivity tool for cybersecurity professionals who need to st
 - 📰 **100+ built-in RSS feeds**.
 - 🔥 **News feed** with filters by category, source, search, and sorting by date, severity or *trending*.
 - ✍️ **Post generator** with 5 tones, 6 formats, and EN/ES support.
+
+<p align="center">
+  <img src=".github/screenshots/02-generate-post.png" width="90%" alt="CyberPulse generate post">
+</p>
+
 - 🤖 **AI generation** configurable from the UI (API key, model, base URL).
 - ⚙️ **Custom RSS sources** from the web interface.
 - 🔑 **Optional API key** to protect sensitive endpoints.
@@ -102,6 +126,10 @@ npm run server
 There are three ways to add a new source.
 
 ### Option 1: From the web UI (recommended)
+
+<p align="center">
+  <img src=".github/screenshots/04-settings.png" width="60%" alt="CyberPulse settings panel">
+</p>
 
 1. Open CyberPulse and click **Settings** (gear icon).
 2. Go to the **Custom RSS Sources** section.
@@ -379,6 +407,16 @@ CyberPulse/
 ├── research/             # Architecture and content strategy docs
 └── README.md             # This file
 ```
+
+---
+
+## Screenshots
+
+A few captures of CyberPulse in action. Click any image to view it full size.
+
+| News Feed | Generate Post | History | Settings |
+|-----------|---------------|---------|----------|
+| <a href=".github/screenshots/01-news-feed.png"><img src=".github/screenshots/01-news-feed.png" width="220"></a> | <a href=".github/screenshots/02-generate-post.png"><img src=".github/screenshots/02-generate-post.png" width="220"></a> | <a href=".github/screenshots/03-history.png"><img src=".github/screenshots/03-history.png" width="220"></a> | <a href=".github/screenshots/04-settings.png"><img src=".github/screenshots/04-settings.png" width="220"></a> |
 
 ---
 

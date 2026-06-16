@@ -22,9 +22,28 @@
 
 ---
 
+## Índice
+
+- [¿Qué hace CyberPulse?](#qué-hace-cyberpulse)
+- [Features](#features)
+- [Quick start con Docker](#quick-start-con-docker)
+- [Uso sin Docker](#uso-sin-docker)
+- [Cómo agregar fuentes RSS](#cómo-agregar-fuentes-rss)
+- [Fuentes RSS incluidas](#fuentes-rss-incluidas-104-fuentes)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Documentación adicional](#documentación-adicional)
+- [Capturas de pantalla](#capturas-de-pantalla)
+- [Licencia](#licencia)
+
+---
+
 ## ¿Qué hace CyberPulse?
 
 CyberPulse es una herramienta productiva para profesionales de ciberseguridad que necesitan estar al día y compartir contenido relevante en LinkedIn.
+
+<p align="center">
+  <img src=".github/screenshots/01-news-feed.png" width="90%" alt="CyberPulse news feed">
+</p>
 
 - **Recopila** noticias de más de 100 fuentes RSS de ciberseguridad.
 - **Clasifica** cada artículo por categoría (`VULNERABILITY`, `MALWARE`, `THREAT INTEL`, etc.) y severidad (`critical`, `high`, `medium`, `low`).
@@ -40,6 +59,11 @@ CyberPulse es una herramienta productiva para profesionales de ciberseguridad qu
 - 📰 **Más de 100 fuentes RSS** activas por defecto.
 - 🔥 **Feed de noticias** con filtros por categoría, fuente, búsqueda y ordenamiento por fecha, severidad o *trending*.
 - ✍️ **Generador de posts** con 5 tonos, 6 formatos y soporte EN/ES.
+
+<p align="center">
+  <img src=".github/screenshots/02-generate-post.png" width="90%" alt="CyberPulse generar post">
+</p>
+
 - 🤖 **Generación con IA** configurable desde la UI (API key, modelo, base URL).
 - ⚙️ **Fuentes RSS personalizadas** desde la interfaz web.
 - 🔑 **API key opcional** para proteger endpoints sensibles.
@@ -102,6 +126,10 @@ npm run server
 Hay tres formas de agregar una nueva fuente.
 
 ### Opción 1: Desde la interfaz web (recomendado)
+
+<p align="center">
+  <img src=".github/screenshots/04-settings.png" width="60%" alt="CyberPulse panel de configuración">
+</p>
 
 1. Abre CyberPulse y haz clic en **Configuración** (icono de engranaje).
 2. Ve a la sección **Fuentes RSS personalizadas**.
@@ -379,6 +407,16 @@ CyberPulse/
 ├── research/             # Documentación de arquitectura y estrategia de contenido
 └── README.md             # Versión en inglés
 ```
+
+---
+
+## Capturas de pantalla
+
+Algunas capturas de CyberPulse en acción. Haz clic en cualquier imagen para verla en tamaño completo.
+
+| News Feed | Generate Post | History | Settings |
+|-----------|---------------|---------|----------|
+| <a href=".github/screenshots/01-news-feed.png"><img src=".github/screenshots/01-news-feed.png" width="220"></a> | <a href=".github/screenshots/02-generate-post.png"><img src=".github/screenshots/02-generate-post.png" width="220"></a> | <a href=".github/screenshots/03-history.png"><img src=".github/screenshots/03-history.png" width="220"></a> | <a href=".github/screenshots/04-settings.png"><img src=".github/screenshots/04-settings.png" width="220"></a> |
 
 ---
 
