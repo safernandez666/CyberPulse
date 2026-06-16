@@ -1,0 +1,101 @@
+{
+  "name": "cyberpulse",
+  "displayName": "CyberPulse",
+  "description": "LinkedIn Content Agent for Cybersecurity - Generate posts from real-time security news",
+  "version": "1.0.0",
+  "publisher": "cyberpulse",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "keywords": [
+    "cybersecurity",
+    "linkedin",
+    "content",
+    "rss",
+    "news",
+    "social media"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "cyberpulse.open",
+        "title": "Open CyberPulse",
+        "category": "CyberPulse",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "cyberpulse.openSettings",
+        "title": "Open Settings",
+        "category": "CyberPulse",
+        "icon": "$(gear)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cyberpulse-sidebar",
+          "title": "CyberPulse",
+          "icon": "$(pulse)"
+        }
+      ]
+    },
+    "views": {
+      "cyberpulse-sidebar": [
+        {
+          "type": "webview",
+          "id": "cyberpulse.panel",
+          "name": "CyberPulse",
+          "icon": "$(pulse)",
+          "contextualTitle": "CyberPulse"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CyberPulse",
+      "properties": {
+        "cyberpulse.url": {
+          "type": "string",
+          "default": "https://6xyrrp7uai5gg.kimi.page",
+          "description": "URL of CyberPulse instance (your deployed URL or local)"
+        },
+        "cyberpulse.apiUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Backend API URL (leave empty to use the same as URL)"
+        },
+        "cyberpulse.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key for authentication (optional)"
+        }
+      }
+    },
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "cyberpulse.open"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node node_modules/typescript/bin/tsc -p ./",
+    "compile": "node node_modules/typescript/bin/tsc -p ./",
+    "watch": "node node_modules/typescript/bin/tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.3.0"
+  }
+}

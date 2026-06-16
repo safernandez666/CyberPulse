@@ -1,0 +1,32 @@
+# =============================================================================
+# CyberPulse — Docker Compose
+# Deploy CyberPulse with a single command
+# =============================================================================
+
+version: "3.8"
+
+services:
+  cyberpulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cyberpulse
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # API Key (optional — remove to allow open access)
+      - CYBERPULSE_API_KEY=${CYBERPULSE_API_KEY:-}
+      # Port
+      - PORT=3001
+      # Scrape interval in minutes (cron format)
+      - SCRAPE_CRON=*/15 * * * *
+    volumes:
+      # Persist database across restarts
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s

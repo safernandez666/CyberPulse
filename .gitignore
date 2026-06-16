@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+*/node_modules
+
+# Build outputs
+dist
+out
+.vite
+
+# Data & secrets
+data
+.env
+.env.*
+!.env.example
+
+# OS & logs
+.DS_Store
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/settings.json
+.idea
