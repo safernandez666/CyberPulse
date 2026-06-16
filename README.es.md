@@ -49,6 +49,7 @@ CyberPulse es una herramienta productiva para profesionales de ciberseguridad qu
 - **Recopila** noticias de más de 100 fuentes RSS de ciberseguridad.
 - **Clasifica** cada artículo por categoría (`VULNERABILITY`, `MALWARE`, `THREAT INTEL`, etc.) y severidad (`critical`, `high`, `medium`, `low`).
 - **Genera posts** para LinkedIn en varios formatos y tonos, con negritas reales (HTML).
+- **Publica directamente en LinkedIn** desde el generador tras la autorización OAuth.
 - **Soporta IA**: conecta tu proveedor OpenAI-compatible (OpenAI, Groq, etc.) para generar posts personalizados; si falla, usa plantillas locales.
 - **Expone una API REST y un endpoint MCP** para integrarlo con agentes de IA como Hermes u OpenClaw.
 - **Funciona 100 % local** con SQLite y Docker.
@@ -60,11 +61,8 @@ CyberPulse es una herramienta productiva para profesionales de ciberseguridad qu
 - 📰 **Más de 100 fuentes RSS** activas por defecto.
 - 🔥 **Feed de noticias** con filtros por categoría, fuente, búsqueda y ordenamiento por fecha, severidad o *trending*.
 - ✍️ **Generador de posts** con 5 tonos, 6 formatos y soporte EN/ES.
-
-<p align="center">
-  <img src=".github/screenshots/02-generate-post.png" width="90%" alt="CyberPulse generar post">
-</p>
-
+- 🚀 **Publicación directa en LinkedIn** desde el generador.
+- 🕐 **Historial / posts guardados** para retener tu contenido generado.
 - 🤖 **Generación con IA** configurable desde la UI (API key, modelo, base URL).
 - ⚙️ **Fuentes RSS personalizadas** desde la interfaz web.
 - 🔑 **API key opcional** para proteger endpoints sensibles.
