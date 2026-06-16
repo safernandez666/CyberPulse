@@ -1,14 +1,15 @@
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Power } from 'lucide-react';
 import type { SourceInfo } from '@/hooks/useRSSFeeds';
 
 interface SidebarProps {
   sources: SourceInfo[];
   onToggleSource: (id: string) => void;
+  onToggleAll?: (active: boolean) => void;
   onClose?: () => void;
 }
 
-export default function Sidebar({ sources, onToggleSource, onClose }: SidebarProps) {
+export default function Sidebar({ sources, onToggleSource, onToggleAll, onClose }: SidebarProps) {
   const activeCount = sources.filter((s) => s.active).length;
   const totalArticles = sources
     .filter((s) => s.active)
@@ -51,9 +52,21 @@ export default function Sidebar({ sources, onToggleSource, onClose }: SidebarPro
 
       {/* Sources List */}
       <div className="flex-1 overflow-y-auto py-3">
-        <p className="px-6 pb-2 text-[11px] font-medium font-jetbrains uppercase tracking-[0.08em] text-text-tertiary">
-          SOURCES
-        </p>
+        <div className="flex items-center justify-between px-6 pb-2">
+          <p className="text-[11px] font-medium font-jetbrains uppercase tracking-[0.08em] text-text-tertiary">
+            SOURCES
+          </p>
+          {onToggleAll && sources.length > 0 && (
+            <button
+              onClick={() => onToggleAll(activeCount === 0)}
+              className="flex items-center gap-1 text-[10px] font-medium font-jetbrains uppercase tracking-[0.08em] text-text-tertiary hover:text-accent transition-colors cursor-pointer"
+              title={activeCount === 0 ? 'Enable all sources' : 'Disable all sources'}
+            >
+              <Power size={10} />
+              {activeCount === 0 ? 'Enable all' : 'Disable all'}
+            </button>
+          )}
+        </div>
         {sources.map((source, index) => (
           <motion.div
             key={source.id}

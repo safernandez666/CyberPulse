@@ -44,6 +44,12 @@ export default function Layout() {
     );
   }, []);
 
+  const handleToggleAllSources = useCallback((active: boolean) => {
+    setLocalSources((prev) =>
+      prev.map((s) => ({ ...s, active }))
+    );
+  }, []);
+
   const handleSelectArticle = useCallback((id: string) => {
     setSelectedArticleId(id);
     setActiveTab('generate');
@@ -105,6 +111,7 @@ export default function Layout() {
         <Sidebar
           sources={localSources.length > 0 ? localSources : sources}
           onToggleSource={handleToggleSource}
+          onToggleAll={handleToggleAllSources}
           onClose={() => setSidebarOpen(false)}
         />
       </aside>
