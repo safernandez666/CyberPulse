@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, Save, KeyRound, Bot, Link, Trash2, Plus, Rss, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, Save, KeyRound, Bot, Link, Trash2, Plus, Rss, Shield, Linkedin, Unlink, CheckCircle2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { getSettings, saveSettings, type Settings as SettingsState, DEFAULT_SETTINGS } from '@/lib/settings';
-import { fetchApiSources, createSource, deleteSource, type SourceInfo } from '@/services/apiService';
+import {
+  fetchApiSources, createSource, deleteSource, type SourceInfo,
+  getLinkedInConfig, saveLinkedInConfig, deleteLinkedInConfig,
+  getLinkedInStatus, getLinkedInAuthUrl, disconnectLinkedIn,
+  type LinkedInStatus,
+} from '@/services/apiService';
 
 export interface SettingsPanelProps {
   className?: string;
@@ -30,14 +35,105 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
   const [newSource, setNewSource] = useState({ name: '', rssUrl: '', category: '' });
   const [adding, setAdding] = useState(false);
 
+  const [linkedinConfigured, setLinkedinConfigured] = useState(false);
+  const [linkedinStatus, setLinkedinStatus] = useState<LinkedInStatus | null>(null);
+  const [linkedinForm, setLinkedinForm] = useState({ clientId: '', clientSecret: '', redirectUri: 'http://localhost:3001/api/linkedin/callback' });
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
+
   useEffect(() => {
     if (open) {
       setSettings(getSettings());
       setSaved(false);
       setToast(null);
       loadSources();
+      loadLinkedIn();
     }
   }, [open]);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.data && event.data.type === 'linkedin-oauth') {
+        if (event.data.success) {
+          showToast('LinkedIn account connected', 'success');
+        } else {
+          showToast('LinkedIn connection failed', 'error');
+        }
+        loadLinkedIn();
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  const loadLinkedIn = useCallback(async () => {
+    try {
+      setLinkedinLoading(true);
+      const [config, status] = await Promise.all([getLinkedInConfig(), getLinkedInStatus()]);
+      setLinkedinConfigured(config.configured);
+      setLinkedinStatus(status);
+    } catch (err: any) {
+      console.error('[Settings] Failed to load LinkedIn status:', err);
+    } finally {
+      setLinkedinLoading(false);
+    }
+  }, []);
+
+  const handleSaveLinkedInConfig = async () => {
+    if (!linkedinForm.clientId.trim() || !linkedinForm.clientSecret.trim()) {
+      showToast('Client ID and Client Secret are required', 'error');
+      return;
+    }
+    try {
+      setLinkedinLoading(true);
+      await saveLinkedInConfig({
+        clientId: linkedinForm.clientId.trim(),
+        clientSecret: linkedinForm.clientSecret.trim(),
+        redirectUri: linkedinForm.redirectUri.trim() || 'http://localhost:3001/api/linkedin/callback',
+      });
+      setLinkedinForm({ clientId: '', clientSecret: '', redirectUri: 'http://localhost:3001/api/linkedin/callback' });
+      showToast('LinkedIn app configured', 'success');
+      await loadLinkedIn();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to save LinkedIn config', 'error');
+    } finally {
+      setLinkedinLoading(false);
+    }
+  };
+
+  const handleConnectLinkedIn = async () => {
+    try {
+      const { url } = await getLinkedInAuthUrl();
+      window.open(url, 'linkedin-oauth', 'width=600,height=700,top=100,left=100');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to start LinkedIn OAuth', 'error');
+    }
+  };
+
+  const handleDisconnectLinkedIn = async () => {
+    try {
+      setLinkedinLoading(true);
+      await disconnectLinkedIn();
+      showToast('LinkedIn account disconnected', 'success');
+      await loadLinkedIn();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to disconnect LinkedIn', 'error');
+    } finally {
+      setLinkedinLoading(false);
+    }
+  };
+
+  const handleDeleteLinkedInConfig = async () => {
+    try {
+      setLinkedinLoading(true);
+      await deleteLinkedInConfig();
+      showToast('LinkedIn configuration removed', 'success');
+      await loadLinkedIn();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to remove LinkedIn config', 'error');
+    } finally {
+      setLinkedinLoading(false);
+    }
+  };
 
   const showToast = useCallback((message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -315,6 +411,112 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-bg-card border-border-default shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-text-primary font-inter text-base flex items-center gap-2">
+                <Linkedin size={18} className="text-accent" />
+                LinkedIn Account
+              </CardTitle>
+              <CardDescription className="text-text-tertiary font-inter text-xs">
+                Publish generated posts directly to your LinkedIn profile. Requires a LinkedIn Developer App with Share on LinkedIn enabled.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {linkedinLoading ? (
+                <p className="text-text-tertiary text-sm font-inter">Loading LinkedIn status...</p>
+              ) : !linkedinConfigured ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Client ID</Label>
+                    <Input
+                      type="text"
+                      placeholder="LinkedIn Client ID"
+                      value={linkedinForm.clientId}
+                      onChange={(e) => setLinkedinForm((prev) => ({ ...prev, clientId: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Client Secret</Label>
+                    <Input
+                      type="password"
+                      placeholder="LinkedIn Client Secret"
+                      value={linkedinForm.clientSecret}
+                      onChange={(e) => setLinkedinForm((prev) => ({ ...prev, clientSecret: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Redirect URI</Label>
+                    <Input
+                      type="text"
+                      placeholder="http://localhost:3001/api/linkedin/callback"
+                      value={linkedinForm.redirectUri}
+                      onChange={(e) => setLinkedinForm((prev) => ({ ...prev, redirectUri: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleSaveLinkedInConfig}
+                    disabled={linkedinLoading}
+                    className="w-full bg-accent text-text-inverse hover:brightness-110 font-inter text-sm font-semibold rounded-button h-10"
+                  >
+                    <Linkedin size={16} />
+                    Save LinkedIn App
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm font-inter text-text-secondary">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    LinkedIn App configured
+                  </div>
+
+                  {linkedinStatus?.connected ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-inter text-text-secondary">
+                        <CheckCircle2 size={16} className="text-emerald-400" />
+                        Account connected
+                        {linkedinStatus.personId && (
+                          <span className="text-text-tertiary font-jetbrains text-xs">({linkedinStatus.personId.slice(0, 12)}...)</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleDisconnectLinkedIn}
+                          disabled={linkedinLoading}
+                          variant="outline"
+                          className="flex-1 border-border-default text-text-secondary hover:text-text-primary hover:bg-bg-elevated font-inter text-sm rounded-button h-10"
+                        >
+                          <Unlink size={16} />
+                          Disconnect Account
+                        </Button>
+                        <Button
+                          onClick={handleDeleteLinkedInConfig}
+                          disabled={linkedinLoading}
+                          variant="outline"
+                          className="flex-1 border-red-500/30 text-red-400 hover:bg-red-500/10 font-inter text-sm rounded-button h-10"
+                        >
+                          <Trash2 size={16} />
+                          Remove App
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleConnectLinkedIn}
+                      disabled={linkedinLoading}
+                      className="w-full bg-accent text-text-inverse hover:brightness-110 font-inter text-sm font-semibold rounded-button h-10"
+                    >
+                      <Linkedin size={16} />
+                      Connect LinkedIn Account
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

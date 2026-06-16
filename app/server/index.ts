@@ -7,6 +7,20 @@ import { seedSources } from './seeds';
 import { scrapeAll, cleanOldArticles, timeAgo, publishDate } from './scraper';
 import { generatePost, generateDailyDigest } from './postGenerator';
 import type { GeneratePostRequest } from './postGenerator';
+import {
+  hasLinkedInConfig,
+  getLinkedInConfig,
+  saveLinkedInConfig,
+  deleteLinkedInConfig,
+  getStoredToken,
+  deleteToken,
+  getAuthorizationUrl,
+  validateState,
+  exchangeCodeForToken,
+  getUserInfo,
+  saveToken,
+  publishPost,
+} from './linkedin';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -68,6 +82,14 @@ app.get('/api', (req, res) => {
       scrape: '/api/scrape',
       health: '/api/health',
       mcp: '/api/mcp',
+      linkedin: {
+        config: 'GET/POST/DELETE /api/linkedin/config',
+        authUrl: 'GET /api/linkedin/auth-url',
+        callback: 'GET /api/linkedin/callback',
+        status: 'GET /api/linkedin/status',
+        disconnect: 'POST /api/linkedin/disconnect',
+        post: 'POST /api/linkedin/post',
+      },
     },
   });
 });
@@ -383,6 +405,159 @@ Return only the post text, with no extra commentary.`,
     res.status(503).json({ error: err.message || 'AI generation failed' });
   }
 });
+
+/* ------------------------------------------------------------------ */
+/*  LinkedIn integration                                               */
+/* ------------------------------------------------------------------ */
+
+app.get('/api/linkedin/config', (req, res) => {
+  try {
+    const configured = hasLinkedInConfig();
+    res.json({ configured });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/linkedin/config', checkApiKey, (req, res) => {
+  try {
+    const { clientId, clientSecret, redirectUri } = req.body;
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({ error: 'clientId and clientSecret are required' });
+    }
+
+    saveLinkedInConfig({
+      clientId: String(clientId).trim(),
+      clientSecret: String(clientSecret).trim(),
+      redirectUri: String(redirectUri || 'http://localhost:3001/api/linkedin/callback').trim(),
+    });
+
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/linkedin/config', checkApiKey, (req, res) => {
+  try {
+    deleteLinkedInConfig();
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/linkedin/auth-url', (req, res) => {
+  try {
+    const url = getAuthorizationUrl();
+    res.json({ url });
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/linkedin/callback', async (req, res) => {
+  try {
+    const code = req.query.code as string | undefined;
+    const state = req.query.state as string | undefined;
+    const error = req.query.error as string | undefined;
+    const errorDescription = req.query.error_description as string | undefined;
+
+    if (error) {
+      return res.status(400).send(renderOAuthResult({ success: false, error: errorDescription || error }));
+    }
+
+    if (!code || !state) {
+      return res.status(400).send(renderOAuthResult({ success: false, error: 'Missing code or state' }));
+    }
+
+    if (!validateState(state)) {
+      return res.status(400).send(renderOAuthResult({ success: false, error: 'Invalid or expired state' }));
+    }
+
+    const tokenData = await exchangeCodeForToken(code);
+    const userInfo = await getUserInfo(tokenData.access_token);
+    const personId = userInfo.sub;
+    const personUrn = `urn:li:person:${personId}`;
+
+    saveToken(tokenData.access_token, tokenData.expires_in, personId, personUrn);
+
+    res.status(200).send(renderOAuthResult({ success: true, name: userInfo.name }));
+  } catch (err: any) {
+    res.status(500).send(renderOAuthResult({ success: false, error: err.message }));
+  }
+});
+
+app.get('/api/linkedin/status', (req, res) => {
+  try {
+    const configured = hasLinkedInConfig();
+    const token = getStoredToken();
+    res.json({
+      configured,
+      connected: !!token,
+      personUrn: token?.person_urn || null,
+      personId: token?.person_id || null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/linkedin/disconnect', (req, res) => {
+  try {
+    deleteToken();
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/linkedin/post', async (req, res) => {
+  try {
+    const { text, visibility } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'text is required' });
+    }
+
+    const vis = visibility === 'CONNECTIONS' ? 'CONNECTIONS' : 'PUBLIC';
+    const postUrn = await publishPost(text, vis);
+
+    res.json({ success: true, postUrn });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+function renderOAuthResult({ success, error, name }: { success: boolean; error?: string; name?: string }) {
+  const title = success ? 'LinkedIn Connected' : 'LinkedIn Connection Failed';
+  const message = success
+    ? `Connected as ${name || 'LinkedIn user'}. You can close this window.`
+    : `Error: ${error || 'Unknown error'}`;
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>${title}</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #e5e5e5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+  .box { text-align: center; max-width: 420px; padding: 2rem; border: 1px solid #333; border-radius: 12px; }
+  h1 { font-size: 1.25rem; margin-bottom: 0.5rem; color: ${success ? '#CCFF00' : '#ef4444'}; }
+  p { color: #a3a3a3; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>${title}</h1>
+    <p>${message}</p>
+  </div>
+  <script>
+    if (window.opener) {
+      window.opener.postMessage({ type: 'linkedin-oauth', success: ${success} }, '*');
+    }
+    setTimeout(() => window.close(), 2500);
+  </script>
+</body>
+</html>`;
+}
 
 /* ------------------------------------------------------------------ */
 /*  MCP (Model Context Protocol) — Single endpoint for AI agents       */

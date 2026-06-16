@@ -15,7 +15,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.resolve(DATA_DIR, 'cyberpulse.db');
 let db: Database.Database | null = null;
 
-const CURRENT_SCHEMA_VERSION = 5;
+const CURRENT_SCHEMA_VERSION = 6;
 
 export function getDb(): Database.Database {
   if (db) return db;
@@ -67,6 +67,30 @@ export function getDb(): Database.Database {
       key TEXT PRIMARY KEY,
       value INTEGER
     );
+
+    CREATE TABLE IF NOT EXISTS linkedin_config (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id TEXT NOT NULL,
+      client_secret TEXT NOT NULL,
+      redirect_uri TEXT DEFAULT 'http://localhost:3001/api/linkedin/callback',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS linkedin_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      person_id TEXT,
+      person_urn TEXT,
+      access_token TEXT NOT NULL,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS linkedin_oauth_states (
+      state TEXT PRIMARY KEY,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   /* One-time migrations */
@@ -89,8 +113,39 @@ export function getDb(): Database.Database {
       db.exec(`ALTER TABLE sources ADD COLUMN custom INTEGER DEFAULT 0`);
     }
     db.prepare(`UPDATE sources SET custom = 0 WHERE custom IS NULL`).run();
-    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(CURRENT_SCHEMA_VERSION);
+    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(5);
     console.log('[DB] Migrated to schema v5: added custom column to sources');
+  }
+
+  if (currentVersion < 6) {
+    /* v6: add LinkedIn config and token tables */
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS linkedin_config (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id TEXT NOT NULL,
+        client_secret TEXT NOT NULL,
+        redirect_uri TEXT DEFAULT 'http://localhost:3001/api/linkedin/callback',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS linkedin_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        person_id TEXT,
+        person_urn TEXT,
+        access_token TEXT NOT NULL,
+        expires_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS linkedin_oauth_states (
+        state TEXT PRIMARY KEY,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(CURRENT_SCHEMA_VERSION);
+    console.log('[DB] Migrated to schema v6: added LinkedIn tables');
   }
 
   return db;

@@ -19,10 +19,20 @@ import {
   ChevronRight,
   Trash2,
   Clock,
+  Linkedin,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { timeAgo } from '@/lib/dateUtils';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -32,7 +42,7 @@ import {
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { NewsArticle } from '@/data/mockNews';
-import { generateAiPost, type GenerateAiPostParams } from '@/services/apiService';
+import { generateAiPost, type GenerateAiPostParams, getLinkedInStatus, publishToLinkedIn } from '@/services/apiService';
 import { getAiSettings } from '@/lib/settings';
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -1482,6 +1492,12 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
   const [aiFallback, setAiFallback] = useState(false);
   const [toast, setToast] = useState<Toast>({ message: '', type: 'success', visible: false });
 
+  const [linkedinConnected, setLinkedinConnected] = useState(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [linkedinVisibility, setLinkedinVisibility] = useState<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ success: boolean; message: string } | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   /* Sync selected article from News Feed */
@@ -1499,6 +1515,33 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
       return valid;
     });
   }, [articles]);
+
+  /* Check LinkedIn connection status */
+  useEffect(() => {
+    getLinkedInStatus()
+      .then((status) => setLinkedinConnected(status.connected))
+      .catch(() => setLinkedinConnected(false));
+  }, []);
+
+  /* Refresh LinkedIn status after publishing or OAuth */
+  const refreshLinkedInStatus = useCallback(async () => {
+    try {
+      const status = await getLinkedInStatus();
+      setLinkedinConnected(status.connected);
+    } catch {
+      setLinkedinConnected(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.data && event.data.type === 'linkedin-oauth') {
+        refreshLinkedInStatus();
+      }
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [refreshLinkedInStatus]);
 
   const selectedArticle = articles.find((a) => a.id === selectedArticleId) ?? articles[0];
   const isDailyDigest = format === 'Daily Digest';
@@ -1649,6 +1692,29 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
       showToast(language === 'es' ? 'Error al guardar' : 'Failed to save', 'error');
     }
   }, [generatedContent, selectedArticle, tone, format, length, showToast, isDailyDigest, selectedArticleIds, language]);
+
+  /* Publish to LinkedIn */
+  const handlePublishToLinkedIn = useCallback(async () => {
+    if (!generatedContent) return;
+    setPublishing(true);
+    setPublishResult(null);
+    try {
+      await publishToLinkedIn(generatedContent, linkedinVisibility);
+      setPublishResult({
+        success: true,
+        message: language === 'es' ? 'Publicado en LinkedIn' : 'Posted to LinkedIn',
+      });
+      showToast(language === 'es' ? 'Publicado en LinkedIn' : 'Posted to LinkedIn');
+    } catch (err: any) {
+      setPublishResult({
+        success: false,
+        message: err?.message || (language === 'es' ? 'Error al publicar en LinkedIn' : 'Failed to post to LinkedIn'),
+      });
+      showToast(err?.message || (language === 'es' ? 'Error al publicar en LinkedIn' : 'Failed to post to LinkedIn'), 'error');
+    } finally {
+      setPublishing(false);
+    }
+  }, [generatedContent, linkedinVisibility, language, showToast]);
 
   /* Section header style */
   const SectionHeader = ({ label }: { label: string }) => (
@@ -1994,7 +2060,7 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
               />
 
               {/* Action buttons */}
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex items-center gap-2 mt-4 flex-wrap">
                 <Button
                   variant="ghost"
                   onClick={handleRegenerate}
@@ -2017,6 +2083,20 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
                 >
                   <Save size={16} />
                   {labels.save}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setPublishResult(null);
+                    setPublishDialogOpen(true);
+                  }}
+                  disabled={!linkedinConnected}
+                  title={linkedinConnected
+                    ? (language === 'es' ? 'Publicar en LinkedIn' : 'Post to LinkedIn')
+                    : (language === 'es' ? 'Conectá LinkedIn en Configuración' : 'Connect LinkedIn in Settings')}
+                  className="bg-[#0A66C2] text-white hover:brightness-110 font-inter text-sm font-semibold flex-[2] rounded-button h-10 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Linkedin size={16} />
+                  {language === 'es' ? 'Publicar en LinkedIn' : 'Post to LinkedIn'}
                 </Button>
               </div>
             </motion.div>
@@ -2051,6 +2131,85 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
           )}
         </AnimatePresence>
       </div>
+
+      {/* LinkedIn publish dialog */}
+      <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
+        <DialogContent className="bg-bg-primary border-border-default text-text-primary sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-text-primary font-inter text-lg flex items-center gap-2">
+              <Linkedin size={20} className="text-[#0A66C2]" />
+              {language === 'es' ? 'Publicar en LinkedIn' : 'Post to LinkedIn'}
+            </DialogTitle>
+            <DialogDescription className="text-text-tertiary font-inter text-xs">
+              {language === 'es'
+                ? 'Revisá el texto y elegí la visibilidad antes de publicar.'
+                : 'Review the text and choose visibility before publishing.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="max-h-[240px] overflow-y-auto rounded-lg border border-border-default bg-bg-elevated p-3 font-merriweather text-sm text-text-secondary whitespace-pre-wrap">
+              {generatedContent}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">
+                {language === 'es' ? 'Visibilidad' : 'Visibility'}
+              </Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={linkedinVisibility === 'PUBLIC' ? 'default' : 'outline'}
+                  onClick={() => setLinkedinVisibility('PUBLIC')}
+                  className={linkedinVisibility === 'PUBLIC'
+                    ? 'bg-accent text-text-inverse font-inter text-sm flex-1 rounded-button h-10'
+                    : 'border-border-default text-text-secondary hover:text-text-primary hover:bg-bg-elevated font-inter text-sm flex-1 rounded-button h-10'
+                  }
+                >
+                  {language === 'es' ? 'Pública' : 'Public'}
+                </Button>
+                <Button
+                  type="button"
+                  variant={linkedinVisibility === 'CONNECTIONS' ? 'default' : 'outline'}
+                  onClick={() => setLinkedinVisibility('CONNECTIONS')}
+                  className={linkedinVisibility === 'CONNECTIONS'
+                    ? 'bg-accent text-text-inverse font-inter text-sm flex-1 rounded-button h-10'
+                    : 'border-border-default text-text-secondary hover:text-text-primary hover:bg-bg-elevated font-inter text-sm flex-1 rounded-button h-10'
+                  }
+                >
+                  {language === 'es' ? 'Conexiones' : 'Connections'}
+                </Button>
+              </div>
+            </div>
+
+            {publishResult && (
+              <div className={`text-sm font-inter ${publishResult.success ? 'text-emerald-400' : 'text-red-400'}`}>
+                {publishResult.message}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPublishDialogOpen(false)}
+              className="border-border-default text-text-secondary hover:text-text-primary hover:bg-bg-elevated font-inter text-sm rounded-button h-10"
+            >
+              {language === 'es' ? 'Cancelar' : 'Cancel'}
+            </Button>
+            <Button
+              onClick={handlePublishToLinkedIn}
+              disabled={publishing}
+              className="bg-[#0A66C2] text-white hover:brightness-110 font-inter text-sm font-semibold rounded-button h-10"
+            >
+              <Linkedin size={16} />
+              {publishing
+                ? (language === 'es' ? 'Publicando...' : 'Publishing...')
+                : (language === 'es' ? 'Publicar' : 'Publish')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -162,3 +162,88 @@ export async function generateAiPost(params: GenerateAiPostParams): Promise<stri
   }
   return data.post;
 }
+
+/* ------------------------------------------------------------------ */
+/*  LinkedIn integration                                              */
+/* ------------------------------------------------------------------ */
+
+export interface LinkedInConfigPayload {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+}
+
+export async function getLinkedInConfig(): Promise<{ configured: boolean }> {
+  const res = await fetch('/api/linkedin/config');
+  if (!res.ok) throw new Error(`LinkedIn config error: ${res.status}`);
+  return res.json();
+}
+
+export async function saveLinkedInConfig(config: LinkedInConfigPayload): Promise<void> {
+  const res = await fetch('/api/linkedin/config', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...cyberpulseHeaders(),
+    },
+    body: JSON.stringify(config),
+  });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Save LinkedIn config failed (${res.status})`);
+  }
+}
+
+export async function deleteLinkedInConfig(): Promise<void> {
+  const res = await fetch('/api/linkedin/config', {
+    method: 'DELETE',
+    headers: cyberpulseHeaders(),
+  });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Delete LinkedIn config failed (${res.status})`);
+  }
+}
+
+export async function getLinkedInAuthUrl(): Promise<{ url: string }> {
+  const res = await fetch('/api/linkedin/auth-url');
+  if (!res.ok) throw new Error(`LinkedIn auth URL error: ${res.status}`);
+  return res.json();
+}
+
+export interface LinkedInStatus {
+  configured: boolean;
+  connected: boolean;
+  personUrn: string | null;
+  personId: string | null;
+}
+
+export async function getLinkedInStatus(): Promise<LinkedInStatus> {
+  const res = await fetch('/api/linkedin/status');
+  if (!res.ok) throw new Error(`LinkedIn status error: ${res.status}`);
+  return res.json();
+}
+
+export async function disconnectLinkedIn(): Promise<void> {
+  const res = await fetch('/api/linkedin/disconnect', { method: 'POST' });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Disconnect LinkedIn failed (${res.status})`);
+  }
+}
+
+export async function publishToLinkedIn(text: string, visibility: 'PUBLIC' | 'CONNECTIONS' = 'PUBLIC'): Promise<{ success: boolean; postUrn: string }> {
+  const res = await fetch('/api/linkedin/post', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...cyberpulseHeaders(),
+    },
+    body: JSON.stringify({ text, visibility }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; postUrn?: string; error?: string };
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Publish to LinkedIn failed (${res.status})`);
+  }
+  return { success: true, postUrn: data.postUrn || '' };
+}

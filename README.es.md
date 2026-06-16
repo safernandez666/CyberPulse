@@ -29,6 +29,7 @@
 - [Quick start con Docker](#quick-start-con-docker)
 - [Uso sin Docker](#uso-sin-docker)
 - [Cómo agregar fuentes RSS](#cómo-agregar-fuentes-rss)
+- [Publicar directamente en LinkedIn](#publicar-directamente-en-linkedin)
 - [Fuentes RSS incluidas](#fuentes-rss-incluidas-104-fuentes)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Documentación adicional](#documentación-adicional)
@@ -208,6 +209,58 @@ docker compose up -d --build
 | `EXPLOIT` | Exploits, PoC, zero-days |
 | `IOT` | Seguridad IoT |
 | `TECH` | Tecnología general relevante |
+
+---
+
+## Publicar directamente en LinkedIn
+
+CyberPulse puede publicar posts generados directamente en tu feed personal de LinkedIn. Usa la API oficial de LinkedIn con OAuth 2.0, así que vos mantenés el control total de tu cuenta.
+
+<p align="center">
+  <img src=".github/screenshots/05-linkedin-settings.png" width="60%" alt="Configuración de LinkedIn">
+</p>
+
+### 1. Crear una LinkedIn Developer App
+
+1. Andá al [LinkedIn Developer Portal](https://developer.linkedin.com/) y hacé clic en **Create app**.
+2. Completá los datos requeridos:
+   - **App name**: ej. `CyberPulse`
+   - **LinkedIn Page**: tenés que asociar una página de empresa de LinkedIn. Si no tenés una, creá una mínima.
+   - **Privacy policy URL**: tu sitio web o perfil de LinkedIn.
+3. En la pestaña **Products**, solicitá:
+   - **Share on LinkedIn** — aprobación inmediata.
+   - **Sign In with LinkedIn using OpenID Connect** — aprobación inmediata.
+4. Andá a la pestaña **Auth**:
+   - Copiá tu **Client ID** y **Client Secret**.
+   - En **OAuth 2.0 settings**, agregá esta URL de redirección:
+     ```
+     http://localhost:3001/api/linkedin/callback
+     ```
+
+### 2. Configurar CyberPulse
+
+1. Abrí CyberPulse y hacé clic en **Configuración**.
+2. Desplazate hasta la sección **LinkedIn Account**.
+3. Pegá tu **Client ID**, **Client Secret** y la redirect URI (`http://localhost:3001/api/linkedin/callback`).
+4. Hacé clic en **Save LinkedIn App**.
+
+### 3. Conectar tu cuenta
+
+1. En la misma sección de LinkedIn Account, hacé clic en **Connect LinkedIn Account**.
+2. Autorizá a CyberPulse en el popup de LinkedIn.
+3. Cuando veas "LinkedIn Connected", podés cerrar el popup.
+
+### 4. Publicar un post
+
+1. Andá a **Generate Post**, elegí un artículo y generá tu publicación.
+2. Hacé clic en **Post to LinkedIn**.
+3. Revisá el texto, elegí **Public** o **Connections** y hacé clic en **Publish**.
+
+<p align="center">
+  <img src=".github/screenshots/07-linkedin-publish-dialog.png" width="70%" alt="Diálogo de publicación en LinkedIn">
+</p>
+
+> **Nota:** los tokens de acceso de LinkedIn expiran aproximadamente a los 60 días. Si deja de funcionar la publicación, reconectá tu cuenta desde Configuración.
 
 ---
 
@@ -418,12 +471,30 @@ Algunas capturas de CyberPulse en acción. Haz clic en cualquier imagen para ver
 |-----------|---------------|---------|----------|
 | <a href=".github/screenshots/01-news-feed.png"><img src=".github/screenshots/01-news-feed.png" width="220"></a> | <a href=".github/screenshots/02-generate-post.png"><img src=".github/screenshots/02-generate-post.png" width="220"></a> | <a href=".github/screenshots/03-history.png"><img src=".github/screenshots/03-history.png" width="220"></a> | <a href=".github/screenshots/04-settings.png"><img src=".github/screenshots/04-settings.png" width="220"></a> |
 
+| LinkedIn Settings | LinkedIn Button | LinkedIn Publish |
+|-------------------|-----------------|------------------|
+| <a href=".github/screenshots/05-linkedin-settings.png"><img src=".github/screenshots/05-linkedin-settings.png" width="220"></a> | <a href=".github/screenshots/06-linkedin-button.png"><img src=".github/screenshots/06-linkedin-button.png" width="220"></a> | <a href=".github/screenshots/07-linkedin-publish-dialog.png"><img src=".github/screenshots/07-linkedin-publish-dialog.png" width="220"></a> |
+
 ---
 
 ## Documentación adicional
 
 - [`app/API.md`](app/API.md) – Endpoints REST y MCP completos.
 - [`app/DOCKER.md`](app/DOCKER.md) – Guía avanzada de Docker.
+
+---
+
+## Variables de entorno
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `PORT` | `3001` | Puerto del servidor |
+| `CYBERPULSE_API_KEY` | `null` | API key opcional para proteger endpoints sensibles |
+| `LINKEDIN_CLIENT_ID` | `null` | Client ID de la LinkedIn Developer App (opcional — también se puede configurar en la GUI) |
+| `LINKEDIN_CLIENT_SECRET` | `null` | Client Secret de la LinkedIn Developer App (opcional — también se puede configurar en la GUI) |
+| `LINKEDIN_REDIRECT_URI` | `http://localhost:3001/api/linkedin/callback` | URI de redirección de OAuth de LinkedIn |
+| `SCRAPE_CRON` | `*/15 * * * *` | Intervalo de scraping RSS |
+| `NODE_ENV` | `production` | Entorno de Node |
 
 ---
 
