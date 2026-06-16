@@ -1,3 +1,5 @@
+<div align="center" style="background-color:#0a0a0a; color:#e5e5e5; padding: 2rem 1rem; border-radius: 12px;">
+
 <p align="center">
   <img src="app/public/pulse-logo-dark.svg" width="140" alt="CyberPulse logo">
 </p>
@@ -19,6 +21,8 @@
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT">
 </p>
+
+</div>
 
 ---
 
