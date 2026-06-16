@@ -1,28 +1,24 @@
-<div align="center" style="background-color:#0a0a0a; color:#e5e5e5; padding: 2rem 1rem; border-radius: 12px;">
-
-<p align="center">
-  <img src="app/public/pulse-logo-dark.svg" width="140" alt="CyberPulse logo">
-</p>
-
-<h1 align="center">CyberPulse</h1>
-
-<p align="center">
-  <strong>Cybersecurity news aggregator with a LinkedIn post generator.</strong><br>
-  Consumes 100+ RSS feeds, classifies articles by severity/category, and generates publication-ready content.
-</p>
-
-<p align="center">
-  <a href="README.es.md">🇪🇸 Leer en castellano</a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready">
-  <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white" alt="Node.js 20+">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
-  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT">
-</p>
-
-</div>
+<table width="100%" bgcolor="#0a0a0a" style="background-color:#0a0a0a; color:#e5e5e5;">
+  <tr>
+    <td align="center" style="padding: 2rem 1rem;">
+      <img src="app/public/pulse-logo-dark.svg" width="140" alt="CyberPulse logo">
+      <h1>CyberPulse</h1>
+      <p>
+        <strong>Cybersecurity news aggregator with a LinkedIn post generator.</strong><br>
+        Consumes 100+ RSS feeds, classifies articles by severity/category, and generates publication-ready content.
+      </p>
+      <p>
+        <a href="README.es.md">🇪🇸 Leer en castellano</a>
+      </p>
+      <p>
+        <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready">
+        <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white" alt="Node.js 20+">
+        <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
+        <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT">
+      </p>
+    </td>
+  </tr>
+</table>
 
 ---
 
