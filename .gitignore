@@ -21,3 +21,8 @@ npm-debug.log*
 # Editor
 .vscode/settings.json
 .idea
+
+# SQLite runtime files
+*.db
+*.db-shm
+*.db-wal
