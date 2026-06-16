@@ -1,9 +1,23 @@
 <p align="center">
-  <a href="README.md"><img src=".github/banner.es.svg" width="100%" alt="CyberPulse banner"></a>
+  <img src="app/public/pulse-logo-dark.svg" width="140" alt="CyberPulse logo">
+</p>
+
+<h1 align="center">CyberPulse</h1>
+
+<p align="center">
+  <strong>Agregador de noticias de ciberseguridad con generador de posts para LinkedIn.</strong><br>
+  Consume más de 100 fuentes RSS, clasifica artículos por severidad/categoría y genera contenido listo para publicar.
 </p>
 
 <p align="center">
   <a href="README.md">🇬🇧 Read in English</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready">
+  <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white" alt="Node.js 20+">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License MIT">
 </p>
 
 ---
