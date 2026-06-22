@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Clock, RefreshCw, RotateCcw, ExternalLink, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { Search, Clock, RefreshCw, RotateCcw, CloudDownload, ExternalLink, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { NewsArticle } from '@/data/mockNews';
 import { timeAgo } from '@/lib/dateUtils';
 
@@ -8,9 +9,12 @@ interface NewsFeedTabProps {
   articles: NewsArticle[];
   loading: boolean;
   refreshing: boolean;
+  syncing: boolean;
   lastUpdated: Date | null;
+  lastSyncResult: { totalNew: number; errors: string[]; finishedAt: string | null } | null;
   onRefresh: () => void;
   onForceReload: () => void;
+  onSyncFeeds: () => void;
   activeSources: string[];
   onSelectArticle: (id: string) => void;
   selectedArticleId: string | null;
@@ -44,9 +48,12 @@ export default function NewsFeedTab({
   articles,
   loading,
   refreshing,
+  syncing,
   lastUpdated,
+  lastSyncResult,
   onRefresh,
   onForceReload,
+  onSyncFeeds,
   activeSources,
   onSelectArticle,
   selectedArticleId,
@@ -149,7 +156,20 @@ export default function NewsFeedTab({
     setPage(1);
   }, [activeSources, selectedCategories, searchQuery, sortBy, pageSize]);
 
-  /* Loading state */
+  // Show toast when a sync finishes
+  useEffect(() => {
+    if (!lastSyncResult || !lastSyncResult.finishedAt) return;
+
+    const { totalNew, errors } = lastSyncResult;
+    if (errors.length > 0) {
+      toast.error(`Sync finished with ${errors.length} error(s)`);
+    } else if (totalNew > 0) {
+      toast.success(`${totalNew} new article${totalNew === 1 ? '' : 's'} found`);
+    } else {
+      toast.info('No new articles found');
+    }
+  }, [lastSyncResult]);
+
   if (loading) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-4">
@@ -218,6 +238,22 @@ export default function NewsFeedTab({
           >
             <RotateCcw size={14} />
             Reload
+          </button>
+
+          {/* Sync Button — fetch new articles from RSS sources */}
+          <button
+            onClick={onSyncFeeds}
+            disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium font-inter rounded-md text-accent bg-accent-dim hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
+            title="Scrape RSS sources and fetch new articles now"
+          >
+            <motion.span
+              animate={syncing ? { rotate: 360 } : { rotate: 0 }}
+              transition={syncing ? { duration: 1, repeat: Infinity, ease: 'linear' } : {}}
+            >
+              <CloudDownload size={14} />
+            </motion.span>
+            {syncing ? 'Syncing...' : 'Sync'}
           </button>
         </div>
 
@@ -309,9 +345,9 @@ export default function NewsFeedTab({
             ? '0 articles'
             : `${startIndex + 1}-${Math.min(startIndex + pageSize, filteredAndSorted.length)} of ${filteredAndSorted.length} articles`}
         </span>
-        {refreshing && (
+        {(syncing || refreshing) && (
           <span className="text-[11px] font-jetbrains text-accent animate-pulse">
-            Syncing RSS feeds...
+            {syncing ? 'Syncing RSS feeds...' : 'Refreshing...'}
           </span>
         )}
       </div>
@@ -483,5 +519,6 @@ function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
         </div>
       </div>
     </motion.article>
+
   );
 }

@@ -121,6 +121,43 @@ export async function toggleSourceActive(id: string, active: boolean): Promise<S
   return data.source;
 }
 
+export interface ScrapeResponse {
+  success: boolean;
+  message: string;
+}
+
+export async function scrapeSources(): Promise<ScrapeResponse> {
+  const res = await fetch('/api/scrape', {
+    method: 'POST',
+    headers: cyberpulseHeaders(),
+  });
+  const data = (await res.json().catch(() => ({}))) as ScrapeResponse & { error?: string };
+  if (!res.ok) {
+    throw new Error(data.error || `Scrape failed (${res.status})`);
+  }
+  return {
+    success: data.success ?? true,
+    message: data.message || 'Scraping started',
+  };
+}
+
+export interface ScrapeStatusResponse {
+  scraping: boolean;
+  startedAt: string | null;
+  lastFetch: string | null;
+  lastResult: {
+    totalNew: number;
+    errors: string[];
+    finishedAt: string | null;
+  };
+}
+
+export async function fetchScrapeStatus(): Promise<ScrapeStatusResponse> {
+  const res = await fetch('/api/scrape/status');
+  if (!res.ok) throw new Error(`Scrape status error: ${res.status}`);
+  return res.json();
+}
+
 export interface GenerateAiPostParams {
   title: string;
   summary: string;

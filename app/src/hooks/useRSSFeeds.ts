@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { NewsArticle } from '@/data/mockNews';
 import { mockNews } from '@/data/mockNews';
 import { fetchFeedsFromProxy, loadCachedNews, saveCachedNews, clearCache } from '@/services/rssService';
-import { fetchApiNews, fetchApiSources, type SourceInfo } from '@/services/apiService';
+import { fetchApiNews, fetchApiSources, scrapeSources, fetchScrapeStatus, type SourceInfo } from '@/services/apiService';
 
 export type { SourceInfo } from '@/services/apiService';
 
@@ -18,10 +18,13 @@ interface UseRSSFeedsReturn {
   sources: SourceInfo[];
   loading: boolean;
   refreshing: boolean;
+  syncing: boolean;
   lastUpdated: Date | null;
+  lastSyncResult: { totalNew: number; errors: string[]; finishedAt: string | null } | null;
   refresh: () => Promise<void>;
   forceReload: () => Promise<void>;
   reloadSources: () => Promise<void>;
+  syncFeeds: () => Promise<void>;
 }
 
 const FALLBACK_SOURCES: SourceInfo[] = [
@@ -37,8 +40,13 @@ export function useRSSFeeds(): UseRSSFeedsReturn {
   const [sources, setSources] = useState<SourceInfo[]>(FALLBACK_SOURCES);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSyncResult, setLastSyncResult] = useState<{ totalNew: number; errors: string[]; finishedAt: string | null } | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const mounted = useRef(false);
+  const isSyncingRef = useRef(false);
+  const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const doFetch = useCallback(async (isRefresh: boolean) => {
     if (isRefresh) setRefreshing(true);
@@ -113,19 +121,7 @@ export function useRSSFeeds(): UseRSSFeedsReturn {
     else setLoading(false);
   }, [articles.length, sources]);
 
-  useEffect(() => {
-    if (mounted.current) return;
-    mounted.current = true;
 
-    doFetch(false);
-
-    // Auto-refresh every 15 minutes
-    const interval = setInterval(() => {
-      doFetch(true);
-    }, 15 * 60 * 1000);
-
-    return () => clearInterval(interval);
-  }, [doFetch]);
 
   const refresh = useCallback(async () => {
     await doFetch(true);
@@ -147,5 +143,75 @@ export function useRSSFeeds(): UseRSSFeedsReturn {
     }
   }, []);
 
-  return { articles, sources, loading, refreshing, lastUpdated, refresh, forceReload, reloadSources };
+  const stopSyncPolling = useCallback((result?: { totalNew: number; errors: string[]; finishedAt: string | null }) => {
+    if (syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current);
+      syncIntervalRef.current = null;
+    }
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = null;
+    }
+    isSyncingRef.current = false;
+    setSyncing(false);
+    if (result) {
+      setLastSyncResult(result);
+    }
+  }, []);
+
+  const syncFeeds = useCallback(async () => {
+    // Avoid duplicate syncs
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+
+    setSyncing(true);
+    try {
+      await scrapeSources();
+
+      // Poll the backend until scraping finishes
+      syncIntervalRef.current = setInterval(async () => {
+        try {
+          const status = await fetchScrapeStatus();
+          // Refresh the article list periodically so the user sees progress
+          await refresh();
+
+          if (!status.scraping) {
+            stopSyncPolling(status.lastResult);
+          }
+        } catch (err) {
+          console.error('[RSS] Sync polling failed:', err);
+          stopSyncPolling();
+        }
+      }, 5000);
+
+      // Safety timeout: stop polling after 5 minutes
+      syncTimeoutRef.current = setTimeout(() => {
+        console.warn('[RSS] Sync polling timed out');
+        stopSyncPolling();
+      }, 5 * 60 * 1000);
+    } catch (err) {
+      console.error('[RSS] Sync failed:', err);
+      stopSyncPolling();
+      throw err;
+    }
+  }, [refresh, stopSyncPolling]);
+
+  useEffect(() => {
+    if (mounted.current) return;
+    mounted.current = true;
+
+    doFetch(false);
+
+    // Auto-refresh every 15 minutes
+    const interval = setInterval(() => {
+      doFetch(true);
+    }, 15 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      stopSyncPolling();
+    };
+  }, [doFetch, stopSyncPolling]);
+
+  return { articles, sources, loading, refreshing, syncing, lastUpdated, lastSyncResult, refresh, forceReload, reloadSources, syncFeeds };
 }

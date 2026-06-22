@@ -642,10 +642,61 @@ app.post('/api/mcp', checkApiKey, async (req, res) => {
 /*  Scraping                                                           */
 /* ------------------------------------------------------------------ */
 
-app.post('/api/scrape', checkApiKey, async (req, res) => {
+let isScraping = false;
+let scrapeStartedAt: string | null = null;
+let lastScrapeResult: { totalNew: number; errors: string[]; finishedAt: string | null } = {
+  totalNew: 0,
+  errors: [],
+  finishedAt: null,
+};
+
+async function runScrape() {
+  if (isScraping) {
+    console.log('[SCRAPER] Scrape already in progress, skipping');
+    return;
+  }
+  isScraping = true;
+  scrapeStartedAt = new Date().toISOString();
   try {
     const result = await scrapeAll();
-    res.json({ success: true, ...result });
+    console.log('[SCRAPER] Background scrape done:', result);
+    lastScrapeResult = {
+      totalNew: result.total,
+      errors: result.errors,
+      finishedAt: new Date().toISOString(),
+    };
+  } catch (err: any) {
+    console.error('[SCRAPER] Background scrape failed:', err);
+    lastScrapeResult = {
+      totalNew: 0,
+      errors: [err?.message || 'Unknown error'],
+      finishedAt: new Date().toISOString(),
+    };
+  } finally {
+    isScraping = false;
+  }
+}
+
+app.get('/api/scrape/status', (req, res) => {
+  try {
+    const db = getDb();
+    const lastFetch = db.prepare(`SELECT MAX(fetched_at) as last FROM fetch_log`).get() as { last: string };
+    res.json({
+      scraping: isScraping,
+      startedAt: scrapeStartedAt,
+      lastFetch: lastFetch.last || null,
+      lastResult: lastScrapeResult,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/scrape', checkApiKey, async (req, res) => {
+  try {
+    // Start scraping in the background and respond immediately
+    runScrape().catch((err) => console.error('[SCRAPER] Failed to start scrape:', err));
+    res.json({ success: true, message: 'Scraping started' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -689,13 +740,13 @@ async function start() {
   // Run the initial scrape in the background so the server starts immediately
   // and Docker healthchecks can pass while feeds are still being fetched.
   console.log('[SERVER] Running initial RSS scrape in background...');
-  scrapeAll()
+  runScrape()
     .then(() => cleanOldArticles())
     .catch((err) => console.error('[SCRAPER] Initial scrape failed:', err));
 
   cron.schedule('*/15 * * * *', async () => {
     console.log('[CRON] Scheduled scrape at', new Date().toISOString());
-    await scrapeAll();
+    await runScrape();
     cleanOldArticles();
   });
 

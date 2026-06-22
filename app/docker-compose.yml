@@ -1,15 +1,19 @@
 # =============================================================================
-# CyberPulse — Docker Compose
+# CyberPulse — Docker Compose (producción)
 # Deploy CyberPulse with a single command
+#
+# IMPORTANTE: después de cambiar código fuente, reconstruí la imagen con:
+#   docker compose up --build
+# o, para forzar build limpio:
+#   docker compose build --no-cache && docker compose up -d
 # =============================================================================
-
-version: "3.8"
 
 services:
   cyberpulse:
     build:
       context: .
       dockerfile: Dockerfile
+    image: cyberpulse:latest
     container_name: cyberpulse
     restart: unless-stopped
     ports:

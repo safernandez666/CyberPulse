@@ -31,6 +31,7 @@
 - **Daily Digest** - resumen multi-articulo con links reales
 - **API REST completa** - para integracion con cualquier herramienta
 - **Endpoint MCP** - Model Context Protocol para agentes de IA
+- **Sync manual desde la UI** - boton para forzar el scraping de fuentes RSS desde el frontend
 - **Dockerizado** - deploy en 1 comando
 - **SQLite persistente** - base de datos local
 
@@ -56,17 +57,44 @@
 - Docker Engine 20.10+
 - Docker Compose 2.0+
 
-### 1. Clonar y levantar
+### Modo producción (imagen estática)
+
+Este modo compila el frontend dentro de la imagen y sirve todo desde el backend en el puerto `3001`. Es el modo recomendado para deployar.
 
 ```bash
 git clone <repo-url> cyberpulse
-cd cyberpulse
+cd cyberpulse/app
 docker compose up -d
 ```
 
 CyberPulse estara disponible en http://localhost:3001
 
-### 2. Comandos utiles
+> **Importante:** si cambias codigo en `src/` o `server/`, tenes que **reconstruir la imagen** porque el frontend se buildea en tiempo de construccion:
+> ```bash
+> docker compose up -d --build
+> ```
+> Para forzar un build limpio (sin cache):
+> ```bash
+> docker compose build --no-cache && docker compose up -d
+> ```
+
+### Modo desarrollo (hot-reload)
+
+Para trabajar sobre el codigo sin tener que reconstruir la imagen cada vez que guardas un archivo, usa el archivo `docker-compose.dev.yml`:
+
+```bash
+cd cyberpulse/app
+docker compose -f docker-compose.dev.yml up -d
+```
+
+- Frontend con Vite HMR: http://localhost:3000
+- API backend: http://localhost:3001
+
+Los cambios en `src/` se reflejan automaticamente en el navegador y los cambios en `server/` reinician el backend gracias a `tsx watch`.
+
+> Si tsx no detecta cambios en macOS/Windows, forza polling agregando `--poll` al comando en `Dockerfile.dev`.
+
+### Comandos utiles
 
 ```bash
 # Ver estado
@@ -94,13 +122,17 @@ docker compose down
 # Detener y borrar datos (cuidado!)
 docker compose down -v
 
-# Reconstruir despues de cambios
+# Reconstruir despues de cambios (produccion)
 docker compose up -d --build
+
+# Modo desarrollo
+docker compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml logs -f
 ```
 
-### 3. Volumen persistente
+### Volumen persistente
 
-La base de datos SQLite se guarda en `./data/cyberpulse.db` (volumen Docker). Los datos sobreviven reinicios.
+La base de datos SQLite se guarda en `./data/cyberpulse.db` (volumen Docker). Los datos sobreviven reinicios tanto en produccion como en desarrollo.
 
 ---
 
@@ -322,9 +354,13 @@ curl http://localhost:3001/api/stats
 
 ### `POST /api/scrape` - Forzar scraping
 
+Tambien podes disparar el scraping desde la interfaz con el boton **Sync** en la pestana News Feed.
+
 ```bash
 curl -X POST http://localhost:3001/api/scrape
 ```
+
+> Si configuraste `CYBERPULSE_API_KEY` en el servidor, tenes que cargar la misma clave en **Settings > CyberPulse API Key** para que el boton Sync funcione.
 
 ---
 
@@ -440,15 +476,23 @@ export const RSS_SOURCES: RSSSource[] = [
 | `ALERT` | Alertas de seguridad |
 | `AWARENESS` | Concientizacion |
 
-### Reconstruir despues de agregar
+### Reconstruir despues de cambios
+
+Como el frontend se buildea dentro de la imagen Docker, cualquier modificacion en `src/` o `server/` requiere reconstruir:
 
 ```bash
 # Detener y reconstruir
 docker compose down
 docker compose up -d --build
 
-# Verificar que la nueva fuente aparece
+# Verificar que los cambios se aplicaron
 curl http://localhost:3001/api/sources
+```
+
+Si sospechas que Docker esta usando cache vieja, fuerza un build limpio:
+
+```bash
+docker compose build --no-cache && docker compose up -d
 ```
 
 La nueva fuente se scrapea automaticamente en el proximo ciclo (cada 15 minutos) o puedes forzarlo:
@@ -560,6 +604,28 @@ docker compose restart
 # ports:
 #   - "8080:3001"
 # Ahora accede en http://localhost:8080
+```
+
+### Los cambios no se reflejan
+
+Si editaste archivos y al reiniciar el contenedor seguis viendo la version anterior, es porque la imagen Docker no se reconstruyo:
+
+```bash
+# Ver la fecha de creacion de la imagen que esta corriendo
+docker inspect cyberpulse --format '{{.Image}}'
+docker images --format 'table {{.Repository}}\t{{.Tag}}\t{{.CreatedAt}}' | grep cyberpulse
+
+# Reconstruir y levantar
+docker compose up -d --build
+
+# O forzar build limpio
+docker compose build --no-cache && docker compose up -d
+```
+
+Para evitar reconstruir en cada cambio mientras desarrollas, usa el modo desarrollo:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### Reconstruir desde cero

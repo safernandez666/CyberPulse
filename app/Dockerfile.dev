@@ -1,0 +1,25 @@
+# =============================================================================
+# CyberPulse — Dockerfile para desarrollo
+# Hot-reload del frontend (Vite) y el backend (tsx watch)
+# =============================================================================
+
+FROM node:20-slim
+
+WORKDIR /app
+
+# Dependencias nativas para better-sqlite3 + curl para healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar dependencias de npm (se cachea mientras package* no cambie)
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+ENV NODE_ENV=development
+ENV PORT=3001
+
+EXPOSE 3000 3001
+
+# Vite HMR + servidor con tsx watch, ambos accesibles desde fuera del contenedor
+CMD ["npx", "concurrently", "npx tsx watch server/index.ts", "npx vite --host"]

@@ -19,7 +19,7 @@ const tabContentVariants = {
 
 export default function Layout() {
   const [activeTab, setActiveTab] = useState<TabId>('news');
-  const { articles, sources, loading, refreshing, lastUpdated, refresh, forceReload, reloadSources } = useRSSFeeds();
+  const { articles, sources, loading, refreshing, syncing, lastUpdated, lastSyncResult, refresh, forceReload, reloadSources, syncFeeds } = useRSSFeeds();
   const [localSources, setLocalSources] = useState<SourceInfo[]>(sources);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -64,9 +64,12 @@ export default function Layout() {
             articles={articles}
             loading={loading}
             refreshing={refreshing}
+            syncing={syncing}
             lastUpdated={lastUpdated}
+            lastSyncResult={lastSyncResult}
             onRefresh={refresh}
             onForceReload={forceReload}
+            onSyncFeeds={syncFeeds}
             activeSources={(localSources.length > 0 ? localSources : sources)
               .filter((s) => s.active)
               .map((s) => s.name)}
