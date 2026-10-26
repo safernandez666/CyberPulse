@@ -196,22 +196,33 @@ export function useRSSFeeds(): UseRSSFeedsReturn {
     }
   }, [refresh, stopSyncPolling]);
 
+  /* doFetch changes identity whenever articles or sources change. Depending on
+     it directly tore down the interval on the first data load and the `mounted`
+     guard stopped it from ever being recreated, so auto-refresh died after the
+     first fetch. Reading it through a ref keeps the effect mount-only. */
+  const doFetchRef = useRef(doFetch);
+  useEffect(() => {
+    doFetchRef.current = doFetch;
+  }, [doFetch]);
+
   useEffect(() => {
     if (mounted.current) return;
     mounted.current = true;
 
-    doFetch(false);
+    doFetchRef.current(false);
+  }, []);
 
+  useEffect(() => {
     // Auto-refresh every 15 minutes
     const interval = setInterval(() => {
-      doFetch(true);
+      doFetchRef.current(true);
     }, 15 * 60 * 1000);
 
     return () => {
       clearInterval(interval);
       stopSyncPolling();
     };
-  }, [doFetch, stopSyncPolling]);
+  }, [stopSyncPolling]);
 
   return { articles, sources, loading, refreshing, syncing, lastUpdated, lastSyncResult, refresh, forceReload, reloadSources, syncFeeds };
 }

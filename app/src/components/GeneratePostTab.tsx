@@ -1461,25 +1461,13 @@ interface GeneratePostTabProps {
 }
 
 export default function GeneratePostTab({ articles, selectedArticleId: propArticleId, onBackToNewsFeed }: GeneratePostTabProps) {
-  /* Guard: no articles */
-  if (!articles || articles.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center gap-4">
-        <p className="text-text-secondary text-sm font-inter font-medium">
-          No articles available. Go back to News Feed to load articles.
-        </p>
-        <button
-          onClick={onBackToNewsFeed}
-          className="px-4 py-2 bg-accent text-[#0A0A0A] font-inter text-sm font-semibold rounded-button hover:brightness-110 transition-all cursor-pointer"
-        >
-          Go to News Feed
-        </button>
-      </div>
-    );
-  }
+  /* NOTE: every hook below must run on each render. The "no articles" guard
+     lives just above the main return, after the last hook — putting it here
+     would change the hook count when articles load and crash React. */
+  const hasArticles = Boolean(articles && articles.length > 0);
 
   /* State */
-  const [selectedArticleId, setSelectedArticleId] = useState<string>(propArticleId ?? articles[0].id);
+  const [selectedArticleId, setSelectedArticleId] = useState<string>(propArticleId ?? articles[0]?.id ?? '');
   const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>(articles.slice(0, 5).map((a) => a.id));
   const [tone, setTone] = useState<Tone>('Professional');
   const [format, setFormat] = useState<Format>('News Analysis');
@@ -1722,6 +1710,23 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
       {label}
     </h3>
   );
+
+  /* Guard: no articles. Placed after every hook so the hook order is stable. */
+  if (!hasArticles || !selectedArticle) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center gap-4">
+        <p className="text-text-secondary text-sm font-inter font-medium">
+          No articles available. Go back to News Feed to load articles.
+        </p>
+        <button
+          onClick={onBackToNewsFeed}
+          className="px-4 py-2 bg-accent text-[#0A0A0A] font-inter text-sm font-semibold rounded-button hover:brightness-110 transition-all cursor-pointer"
+        >
+          Go to News Feed
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row h-full gap-0">
