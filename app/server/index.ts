@@ -30,8 +30,31 @@ const API_KEY = process.env.CYBERPULSE_API_KEY || null;
 /*  Middleware                                                         */
 /* ------------------------------------------------------------------ */
 
+/* The bundled UI is served from this same origin, so it never needs CORS.
+   Only the dev Vite server and explicitly allowed origins do. Defaulting to
+   '*' would let any site the user visits drive the LinkedIn endpoints. */
+const DEFAULT_ALLOWED_ORIGINS = [
+  `http://localhost:${PORT}`,
+  `http://127.0.0.1:${PORT}`,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+const ALLOWED_ORIGINS = (process.env.CYBERPULSE_CORS_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const CORS_ALLOW_ALL = ALLOWED_ORIGINS.includes('*');
+const corsOrigins = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
+
 app.use(cors({
-  origin: '*',
+  origin(origin, callback) {
+    // Same-origin / non-browser clients (curl, MCP agents) send no Origin.
+    if (!origin) return callback(null, true);
+    if (CORS_ALLOW_ALL || corsOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`Origin not allowed by CORS: ${origin}`));
+  },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
 }));
@@ -331,7 +354,52 @@ interface GenerateAiRequest {
   baseUrl?: string;
 }
 
-app.post('/api/generate-ai', async (req, res) => {
+/* `baseUrl` arrives from the browser, so it is attacker-controlled whenever
+   this endpoint is reachable. Without a host allowlist the server can be made
+   to fetch arbitrary internal URLs and hand the response body back (SSRF). */
+const DEFAULT_AI_HOSTS = [
+  'api.openai.com',
+  'api.groq.com',
+  'api.anthropic.com',
+  'api.mistral.ai',
+  'api.together.xyz',
+  'api.deepseek.com',
+  'openrouter.ai',
+  'generativelanguage.googleapis.com',
+];
+
+const AI_HOST_ALLOWLIST = (() => {
+  const extra = (process.env.CYBERPULSE_AI_HOSTS || '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set([...DEFAULT_AI_HOSTS, ...extra]);
+})();
+
+function resolveAiBaseUrl(raw: unknown): { url: string } | { error: string } {
+  const candidate = (raw && String(raw).trim()) || 'https://api.openai.com/v1';
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return { error: 'baseUrl must be a valid absolute URL' };
+  }
+
+  if (parsed.protocol !== 'https:') {
+    return { error: 'baseUrl must use https' };
+  }
+
+  if (!AI_HOST_ALLOWLIST.has(parsed.hostname.toLowerCase())) {
+    return {
+      error: `Provider host "${parsed.hostname}" is not allowed. Add it to CYBERPULSE_AI_HOSTS to permit it.`,
+    };
+  }
+
+  return { url: `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}` };
+}
+
+app.post('/api/generate-ai', checkApiKey, async (req, res) => {
   try {
     const body = req.body as GenerateAiRequest;
     const { title, summary, source, category, severity, url, tone, format, length, language, apiKey, model, baseUrl } = body;
@@ -340,7 +408,11 @@ app.post('/api/generate-ai', async (req, res) => {
       return res.status(503).json({ error: 'OpenAI API key not configured' });
     }
 
-    const resolvedBaseUrl = ((baseUrl && String(baseUrl)) || 'https://api.openai.com/v1').replace(/\/$/, '');
+    const resolved = resolveAiBaseUrl(baseUrl);
+    if ('error' in resolved) {
+      return res.status(400).json({ error: resolved.error });
+    }
+    const resolvedBaseUrl = resolved.url;
     const resolvedModel = model || 'gpt-4o-mini';
 
     const langLabel =
@@ -410,7 +482,7 @@ Return only the post text, with no extra commentary.`,
 /*  LinkedIn integration                                               */
 /* ------------------------------------------------------------------ */
 
-app.get('/api/linkedin/config', (req, res) => {
+app.get('/api/linkedin/config', checkApiKey, (req, res) => {
   try {
     const configured = hasLinkedInConfig();
     res.json({ configured });
@@ -447,7 +519,7 @@ app.delete('/api/linkedin/config', checkApiKey, (req, res) => {
   }
 });
 
-app.get('/api/linkedin/auth-url', (req, res) => {
+app.get('/api/linkedin/auth-url', checkApiKey, (req, res) => {
   try {
     const url = getAuthorizationUrl();
     res.json({ url });
@@ -457,6 +529,9 @@ app.get('/api/linkedin/auth-url', (req, res) => {
 });
 
 app.get('/api/linkedin/callback', async (req, res) => {
+  /* The opener is the CyberPulse UI, which is served from this same origin. */
+  const appOrigin = `${req.protocol}://${req.get('host')}`;
+
   try {
     const code = req.query.code as string | undefined;
     const state = req.query.state as string | undefined;
@@ -464,15 +539,15 @@ app.get('/api/linkedin/callback', async (req, res) => {
     const errorDescription = req.query.error_description as string | undefined;
 
     if (error) {
-      return res.status(400).send(renderOAuthResult({ success: false, error: errorDescription || error }));
+      return res.status(400).send(renderOAuthResult({ success: false, error: errorDescription || error }, appOrigin));
     }
 
     if (!code || !state) {
-      return res.status(400).send(renderOAuthResult({ success: false, error: 'Missing code or state' }));
+      return res.status(400).send(renderOAuthResult({ success: false, error: 'Missing code or state' }, appOrigin));
     }
 
     if (!validateState(state)) {
-      return res.status(400).send(renderOAuthResult({ success: false, error: 'Invalid or expired state' }));
+      return res.status(400).send(renderOAuthResult({ success: false, error: 'Invalid or expired state' }, appOrigin));
     }
 
     const tokenData = await exchangeCodeForToken(code);
@@ -482,13 +557,13 @@ app.get('/api/linkedin/callback', async (req, res) => {
 
     saveToken(tokenData.access_token, tokenData.expires_in, personId, personUrn);
 
-    res.status(200).send(renderOAuthResult({ success: true, name: userInfo.name }));
+    res.status(200).send(renderOAuthResult({ success: true, name: userInfo.name }, appOrigin));
   } catch (err: any) {
-    res.status(500).send(renderOAuthResult({ success: false, error: err.message }));
+    res.status(500).send(renderOAuthResult({ success: false, error: err.message }, appOrigin));
   }
 });
 
-app.get('/api/linkedin/status', (req, res) => {
+app.get('/api/linkedin/status', checkApiKey, (req, res) => {
   try {
     const configured = hasLinkedInConfig();
     const token = getStoredToken();
@@ -503,7 +578,7 @@ app.get('/api/linkedin/status', (req, res) => {
   }
 });
 
-app.post('/api/linkedin/disconnect', (req, res) => {
+app.post('/api/linkedin/disconnect', checkApiKey, (req, res) => {
   try {
     deleteToken();
     res.json({ success: true });
@@ -512,7 +587,7 @@ app.post('/api/linkedin/disconnect', (req, res) => {
   }
 });
 
-app.post('/api/linkedin/post', async (req, res) => {
+app.post('/api/linkedin/post', checkApiKey, async (req, res) => {
   try {
     const { text, visibility } = req.body;
     if (!text || typeof text !== 'string') {
@@ -528,15 +603,31 @@ app.post('/api/linkedin/post', async (req, res) => {
   }
 });
 
-function renderOAuthResult({ success, error, name }: { success: boolean; error?: string; name?: string }) {
+/* `error` comes straight from LinkedIn's `error_description` query param and
+   `name` from the userinfo response, so both must be escaped before they are
+   interpolated into this page. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderOAuthResult(
+  { success, error, name }: { success: boolean; error?: string; name?: string },
+  targetOrigin: string,
+) {
   const title = success ? 'LinkedIn Connected' : 'LinkedIn Connection Failed';
   const message = success
-    ? `Connected as ${name || 'LinkedIn user'}. You can close this window.`
-    : `Error: ${error || 'Unknown error'}`;
+    ? `Connected as ${escapeHtml(name || 'LinkedIn user')}. You can close this window.`
+    : `Error: ${escapeHtml(error || 'Unknown error')}`;
 
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>${title}</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
 <style>
   body { font-family: system-ui, sans-serif; background: #0a0a0a; color: #e5e5e5; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
   .box { text-align: center; max-width: 420px; padding: 2rem; border: 1px solid #333; border-radius: 12px; }
@@ -551,7 +642,10 @@ function renderOAuthResult({ success, error, name }: { success: boolean; error?:
   </div>
   <script>
     if (window.opener) {
-      window.opener.postMessage({ type: 'linkedin-oauth', success: ${success} }, '*');
+      window.opener.postMessage(
+        { type: 'linkedin-oauth', success: ${success} },
+        ${JSON.stringify(targetOrigin)}
+      );
     }
     setTimeout(() => window.close(), 2500);
   </script>
@@ -730,6 +824,21 @@ app.get('/{*splat}', (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  Error handling                                                     */
+/* ------------------------------------------------------------------ */
+
+/* A blocked origin is a rejected request, not a server fault — answer 403
+   instead of letting the CORS error surface as an unhandled 500. */
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && err.message?.startsWith('Origin not allowed by CORS')) {
+    return res.status(403).json({ error: err.message });
+  }
+  if (res.headersSent) return next(err);
+  console.error('[SERVER] Unhandled error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+/* ------------------------------------------------------------------ */
 /*  Startup                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -744,7 +853,17 @@ async function start() {
     .then(() => cleanOldArticles())
     .catch((err) => console.error('[SCRAPER] Initial scrape failed:', err));
 
-  cron.schedule('*/15 * * * *', async () => {
+  /* docker-compose declares SCRAPE_CRON, so honour it instead of ignoring the
+     value the operator set. Falls back to the previous hardcoded interval. */
+  const DEFAULT_SCRAPE_CRON = '*/15 * * * *';
+  let scrapeCron = (process.env.SCRAPE_CRON || '').trim() || DEFAULT_SCRAPE_CRON;
+  if (!cron.validate(scrapeCron)) {
+    console.warn(`[CRON] Invalid SCRAPE_CRON "${scrapeCron}", falling back to "${DEFAULT_SCRAPE_CRON}"`);
+    scrapeCron = DEFAULT_SCRAPE_CRON;
+  }
+  console.log(`[CRON] Scrape schedule: ${scrapeCron}`);
+
+  cron.schedule(scrapeCron, async () => {
     console.log('[CRON] Scheduled scrape at', new Date().toISOString());
     await runScrape();
     cleanOldArticles();

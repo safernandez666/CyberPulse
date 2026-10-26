@@ -211,7 +211,7 @@ export interface LinkedInConfigPayload {
 }
 
 export async function getLinkedInConfig(): Promise<{ configured: boolean }> {
-  const res = await fetch('/api/linkedin/config');
+  const res = await fetch('/api/linkedin/config', { headers: cyberpulseHeaders() });
   if (!res.ok) throw new Error(`LinkedIn config error: ${res.status}`);
   return res.json();
 }
@@ -243,7 +243,7 @@ export async function deleteLinkedInConfig(): Promise<void> {
 }
 
 export async function getLinkedInAuthUrl(): Promise<{ url: string }> {
-  const res = await fetch('/api/linkedin/auth-url');
+  const res = await fetch('/api/linkedin/auth-url', { headers: cyberpulseHeaders() });
   if (!res.ok) throw new Error(`LinkedIn auth URL error: ${res.status}`);
   return res.json();
 }
@@ -256,13 +256,13 @@ export interface LinkedInStatus {
 }
 
 export async function getLinkedInStatus(): Promise<LinkedInStatus> {
-  const res = await fetch('/api/linkedin/status');
+  const res = await fetch('/api/linkedin/status', { headers: cyberpulseHeaders() });
   if (!res.ok) throw new Error(`LinkedIn status error: ${res.status}`);
   return res.json();
 }
 
 export async function disconnectLinkedIn(): Promise<void> {
-  const res = await fetch('/api/linkedin/disconnect', { method: 'POST' });
+  const res = await fetch('/api/linkedin/disconnect', { method: 'POST', headers: cyberpulseHeaders() });
   const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
   if (!res.ok || !data.success) {
     throw new Error(data.error || `Disconnect LinkedIn failed (${res.status})`);
