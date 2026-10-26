@@ -21,6 +21,12 @@ import {
   saveToken,
   publishPost,
 } from './linkedin';
+import {
+  escapeHtml,
+  isSameOrigin,
+  buildAiHostAllowlist,
+  resolveAiBaseUrl,
+} from './security';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -47,20 +53,6 @@ const ALLOWED_ORIGINS = (process.env.CYBERPULSE_CORS_ORIGINS || '')
 
 const CORS_ALLOW_ALL = ALLOWED_ORIGINS.includes('*');
 const corsOrigins = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
-
-/* PORT is what the server binds to, not necessarily what the browser dialled:
-   a Docker port mapping or a reverse proxy changes it. Comparing the Origin
-   against the request's own Host is what actually identifies a same-origin
-   request, and `<script type="module">` is fetched with CORS, so getting this
-   wrong 403s the app's own JavaScript. */
-function isSameOrigin(origin: string, host: string | undefined): boolean {
-  if (!host) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 app.use(cors((req, callback) => {
   const origin = req.headers.origin;
@@ -386,50 +378,7 @@ interface GenerateAiRequest {
   baseUrl?: string;
 }
 
-/* `baseUrl` arrives from the browser, so it is attacker-controlled whenever
-   this endpoint is reachable. Without a host allowlist the server can be made
-   to fetch arbitrary internal URLs and hand the response body back (SSRF). */
-const DEFAULT_AI_HOSTS = [
-  'api.openai.com',
-  'api.groq.com',
-  'api.anthropic.com',
-  'api.mistral.ai',
-  'api.together.xyz',
-  'api.deepseek.com',
-  'openrouter.ai',
-  'generativelanguage.googleapis.com',
-];
-
-const AI_HOST_ALLOWLIST = (() => {
-  const extra = (process.env.CYBERPULSE_AI_HOSTS || '')
-    .split(',')
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
-  return new Set([...DEFAULT_AI_HOSTS, ...extra]);
-})();
-
-function resolveAiBaseUrl(raw: unknown): { url: string } | { error: string } {
-  const candidate = (raw && String(raw).trim()) || 'https://api.openai.com/v1';
-
-  let parsed: URL;
-  try {
-    parsed = new URL(candidate);
-  } catch {
-    return { error: 'baseUrl must be a valid absolute URL' };
-  }
-
-  if (parsed.protocol !== 'https:') {
-    return { error: 'baseUrl must use https' };
-  }
-
-  if (!AI_HOST_ALLOWLIST.has(parsed.hostname.toLowerCase())) {
-    return {
-      error: `Provider host "${parsed.hostname}" is not allowed. Add it to CYBERPULSE_AI_HOSTS to permit it.`,
-    };
-  }
-
-  return { url: `${parsed.origin}${parsed.pathname.replace(/\/$/, '')}` };
-}
+const AI_HOST_ALLOWLIST = buildAiHostAllowlist(process.env.CYBERPULSE_AI_HOSTS);
 
 app.post('/api/generate-ai', checkApiKey, async (req, res) => {
   try {
@@ -440,7 +389,7 @@ app.post('/api/generate-ai', checkApiKey, async (req, res) => {
       return res.status(503).json({ error: 'OpenAI API key not configured' });
     }
 
-    const resolved = resolveAiBaseUrl(baseUrl);
+    const resolved = resolveAiBaseUrl(baseUrl, AI_HOST_ALLOWLIST);
     if ('error' in resolved) {
       return res.status(400).json({ error: resolved.error });
     }
@@ -634,18 +583,6 @@ app.post('/api/linkedin/post', checkApiKey, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
-/* `error` comes straight from LinkedIn's `error_description` query param and
-   `name` from the userinfo response, so both must be escaped before they are
-   interpolated into this page. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function renderOAuthResult(
   { success, error, name }: { success: boolean; error?: string; name?: string },

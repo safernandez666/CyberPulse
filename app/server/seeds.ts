@@ -127,6 +127,24 @@ export const RSS_SOURCES: RSSSource[] = [
   { name: 'Appsecco', rssUrl: 'https://blog.appsecco.com/feed', category: 'VULNERABILITY', active: false, brokenReason: 'serves HTML, feed removed' },
   { name: 'Troy Hunt', rssUrl: 'https://www.troyhunt.com/rss/', category: 'DATA BREACH' },
   { name: 'Hacker News Frontpage', rssUrl: 'https://hnrss.org/frontpage', category: 'TECH' },
+
+  /* Curated from github.com/zer0yu/CyberSecurityRSS. Of its 453 feeds we did
+     not already carry, 296 were live; these are the security-focused,
+     non-proxied ones verified to return parsable items on 2026-10-26. */
+  { name: 'Kali Linux', rssUrl: 'https://www.kali.org/rss.xml', category: 'TECH' },
+  { name: 'Google Bug Hunters', rssUrl: 'https://bughunters.google.com/feed/en', category: 'RESEARCH' },
+  { name: 'NVISO Labs', rssUrl: 'https://blog.nviso.eu/feed/', category: 'RESEARCH' },
+  { name: 'XPN InfoSec Blog', rssUrl: 'https://blog.xpnsec.com/rss/', category: 'RESEARCH' },
+  { name: 'S3cur3Th1sSh1t', rssUrl: 'https://s3cur3th1ssh1t.github.io/feed.xml', category: 'RESEARCH' },
+  { name: 'MaskRay', rssUrl: 'https://maskray.me/blog/atom.xml', category: 'RESEARCH' },
+  { name: 'Fuzzing Labs', rssUrl: 'https://webassembly-security.com/feed/', category: 'RESEARCH' },
+  { name: 'Wallarm Lab', rssUrl: 'https://lab.wallarm.com/feed/', category: 'VULNERABILITY' },
+  { name: 'Telekom Security', rssUrl: 'https://github.security.telekom.com/atom.xml', category: 'VULNERABILITY' },
+  { name: 'Shubham Shah', rssUrl: 'https://shubs.io/rss/', category: 'VULNERABILITY' },
+  { name: 'Joseph Thacker', rssUrl: 'https://rez0.blog/feed.xml', category: 'VULNERABILITY' },
+  { name: 'Yassine Aboukir', rssUrl: 'https://www.yassineaboukir.com/feed.xml', category: 'VULNERABILITY', active: false, brokenReason: 'malformed XML entity' },
+  { name: 'GuidePoint Security', rssUrl: 'https://www.guidepointsecurity.com/feed/', category: 'THREAT INTEL' },
+  { name: 'ThreatCluster', rssUrl: 'https://threatcluster.io/feed.xml', category: 'THREAT INTEL' },
 ];
 
 export function seedSources() {
