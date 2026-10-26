@@ -477,11 +477,21 @@ function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
         hidden: { opacity: 0, y: 16 },
         visible: { opacity: 1, y: 0 },
       }}
-      exit={{ opacity: 0, scale: 0.94, y: -8 }}
+      /* AnimatePresence unmounts a card only once every animation on it has
+         settled, so the exit transition is declared here and kept short. A
+         spring was gating it: its numerical settle time ran ~1s, far past the
+         fade, leaving ~50 filtered-out cards mounted and animating at once.
+         With this many cards restraint reads better than flourish — a quick
+         fade out, then the survivors glide to their new slots. */
+      /* AnimatePresence unmounts a card only once every animation on it has
+         settled, so exit gets its own short transition rather than inheriting
+         the entrance timing. With ~50 cards changing at once a quick fade
+         reads calmer than a scale-and-slide on every one of them. */
+      exit={{ opacity: 0, transition: { duration: 0.14, ease: 'easeOut' } }}
       transition={{
-        duration: 0.35,
+        duration: 0.24,
         ease: [0, 0, 0.2, 1] as [number, number, number, number],
-        layout: { type: 'spring', stiffness: 420, damping: 38, mass: 0.9 },
+        layout: { duration: 0.26, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
       }}
       layout
       onClick={onClick}

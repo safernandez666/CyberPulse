@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
-import { X, Power, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { X, Power, AlertTriangle, ChevronDown } from 'lucide-react';
 import type { SourceInfo } from '@/hooks/useRSSFeeds';
 
 /* `count` is how many articles the source contributes to the window currently
@@ -19,6 +20,16 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ sources, onToggleSource, onToggleAll, onClose }: SidebarProps) {
+  /* Sources with nothing in the current window are hidden so the list only
+     shows what the feed can actually surface. They stay one click away rather
+     than gone: this is also the only place to switch a source on or off, and
+     in a 24h window roughly two thirds of them have nothing to show. */
+  const [showEmpty, setShowEmpty] = useState(false);
+
+  const withData = sources.filter((s) => s.count > 0);
+  const empty = sources.filter((s) => s.count === 0);
+  const visible = showEmpty ? [...withData, ...empty] : withData;
+
   const activeCount = sources.filter((s) => s.active).length;
   const totalArticles = sources
     .filter((s) => s.active)
@@ -76,15 +87,21 @@ export default function Sidebar({ sources, onToggleSource, onToggleAll, onClose 
             </button>
           )}
         </div>
-        {sources.map((source, index) => (
+        <AnimatePresence initial={false}>
+        {visible.map((source, index) => (
           <motion.div
             key={source.id}
+            layout
             initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
             transition={{
-              duration: 0.3,
+              duration: 0.26,
               ease: 'easeOut',
-              delay: index * 0.04,
+              /* Stagger the first screenful only; past that the delay would
+                 outlast the animation itself. */
+              delay: Math.min(index, 12) * 0.03,
+              layout: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
             }}
             className={`
               flex items-center gap-3 px-6 py-2.5 cursor-pointer
@@ -148,6 +165,22 @@ export default function Sidebar({ sources, onToggleSource, onToggleAll, onClose 
             )}
           </motion.div>
         ))}
+        </AnimatePresence>
+
+        {empty.length > 0 && (
+          <button
+            onClick={() => setShowEmpty((v) => !v)}
+            aria-expanded={showEmpty}
+            className="w-full flex items-center gap-1.5 px-6 py-2.5 text-[10px] font-medium font-jetbrains uppercase tracking-[0.08em] text-text-tertiary hover:text-accent transition-colors cursor-pointer"
+          >
+            <ChevronDown
+              size={11}
+              className={`transition-transform duration-200 ${showEmpty ? 'rotate-180' : ''}`}
+              aria-hidden="true"
+            />
+            {showEmpty ? 'Hide' : 'Show'} {empty.length} with no data
+          </button>
+        )}
       </div>
 
       {/* Sidebar Footer */}
