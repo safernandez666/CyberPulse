@@ -15,7 +15,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.resolve(DATA_DIR, 'cyberpulse.db');
 let db: Database.Database | null = null;
 
-const CURRENT_SCHEMA_VERSION = 6;
+const CURRENT_SCHEMA_VERSION = 7;
 
 export function getDb(): Database.Database {
   if (db) return db;
@@ -101,7 +101,7 @@ export function getDb(): Database.Database {
     /* v4: expanded RSS source list and normalized timestamps. Clear old
        articles so the next scrape populates fresh data from all sources. */
     db.exec(`DELETE FROM articles`);
-    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(CURRENT_SCHEMA_VERSION);
+    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(4);
     console.log('[DB] Migrated to schema v4: cleared articles for fresh re-scrape');
   }
 
@@ -146,6 +146,30 @@ export function getDb(): Database.Database {
     `);
     db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(CURRENT_SCHEMA_VERSION);
     console.log('[DB] Migrated to schema v6: added LinkedIn tables');
+  }
+
+  if (currentVersion < 7) {
+    /* v7: 16 built-in feeds were verified dead on 2026-10-26 (bot protection,
+       removed endpoints, a hostname whose TLS cert belongs to someone else).
+       seedSources() refreshes URLs but deliberately never flips `active`, so
+       existing databases need this one-time pass to stop paying a request —
+       and in the timeout cases, 15 s — for them on every scrape. */
+    const deadSources = [
+      'ASD ACSC Alerts', 'Appsecco', 'CCN-CERT', 'Cyber Kendra', 'CyberNews',
+      'ENISA', 'FBI Cyber', 'Fortinet Blog', 'Google TAG', 'Mandiant',
+      'NSA Cybersecurity', 'OSI', 'Packet Storm', 'Security Boulevard',
+      'VulDB', 'tttang',
+    ];
+    const deactivate = db.prepare(`UPDATE sources SET active = 0 WHERE name = ? AND custom = 0`);
+    let disabled = 0;
+    const runV7 = db.transaction(() => {
+      for (const name of deadSources) {
+        disabled += deactivate.run(name).changes;
+      }
+    });
+    runV7();
+    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(7);
+    console.log(`[DB] Migrated to schema v7: deactivated ${disabled} unreachable feeds`);
   }
 
   return db;
