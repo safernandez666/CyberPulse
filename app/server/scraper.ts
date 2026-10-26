@@ -37,6 +37,32 @@ export function publishDate(dateStr: string | Date): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/* Feeds in the wild carry timezone abbreviations JS cannot parse (CERT-EU
+   sends "Fri, 23 Oct 2026 16:36:26 CEST"). `new Date(...).toISOString()` throws
+   on those, which used to abort every remaining item from that source. */
+const TZ_ABBREVIATIONS: Record<string, string> = {
+  CET: '+0100', CEST: '+0200', EET: '+0200', EEST: '+0300',
+  WET: '+0000', WEST: '+0100', BST: '+0100', MSK: '+0300',
+  IST: '+0530', JST: '+0900', KST: '+0900', AEST: '+1000', AEDT: '+1100',
+};
+
+export function parsePublishedAt(raw: string | undefined): string {
+  if (!raw) return new Date().toISOString();
+
+  const direct = new Date(raw);
+  if (!isNaN(direct.getTime())) return direct.toISOString();
+
+  /* Retry with the trailing abbreviation swapped for a numeric offset. */
+  const match = raw.trim().match(/\s([A-Z]{2,4})$/);
+  const offset = match ? TZ_ABBREVIATIONS[match[1]] : undefined;
+  if (offset) {
+    const retry = new Date(raw.trim().replace(/\s[A-Z]{2,4}$/, ` ${offset}`));
+    if (!isNaN(retry.getTime())) return retry.toISOString();
+  }
+
+  return new Date().toISOString();
+}
+
 function readTime(description: string): string {
   const text = description.replace(/<[^>]*>/g, ' ');
   const words = text.split(/\s+/).filter(Boolean).length;
@@ -57,24 +83,28 @@ export async function scrapeSource(source: { name: string; rssUrl: string; categ
     `);
 
     for (const item of items) {
-      if (!item.title || !item.link) continue;
-      const summary = item.contentSnippet || item.content || '';
-      const rawDate = item.isoDate || item.pubDate || new Date().toISOString();
-      const pubDate = new Date(rawDate).toISOString();
+      try {
+        if (!item.title || !item.link) continue;
+        const summary = item.contentSnippet || item.content || '';
+        const pubDate = parsePublishedAt(item.isoDate || item.pubDate);
 
-      const result = insertStmt.run(
-        item.title,
-        summary.slice(0, 400),
-        source.name,
-        inferSeverity(item.title),
-        source.category,
-        pubDate,
-        publishDate(pubDate),
-        readTime(summary),
-        item.link,
-      );
+        const result = insertStmt.run(
+          item.title,
+          summary.slice(0, 400),
+          source.name,
+          inferSeverity(item.title),
+          source.category,
+          pubDate,
+          publishDate(pubDate),
+          readTime(summary),
+          item.link,
+        );
 
-      if (result.changes > 0) newCount++;
+        if (result.changes > 0) newCount++;
+      } catch (itemErr: any) {
+        /* One malformed entry should cost us that entry, not the whole feed. */
+        console.warn(`[SCRAPER] ${source.name}: skipped an item — ${itemErr?.message || itemErr}`);
+      }
     }
 
     // Update source stats
@@ -93,25 +123,45 @@ export async function scrapeSource(source: { name: string; rssUrl: string; categ
   }
 }
 
+/* Feeds are independent and the work is almost entirely network wait, so they
+   are fetched through a small worker pool instead of one at a time. The old
+   serial loop (plus a 500 ms sleep after every source) took ~3.6 min for 100+
+   feeds, which meant a scrape was still running when the next one was due. */
+const SCRAPE_CONCURRENCY = Math.max(
+  1,
+  parseInt(process.env.CYBERPULSE_SCRAPE_CONCURRENCY || '', 10) || 8
+);
+
 export async function scrapeAll(): Promise<{ total: number; errors: string[] }> {
-  console.log('[SCRAPER] Starting full RSS scrape...');
+  const startedAt = Date.now();
   const db = getDb();
   const rows = db.prepare(`SELECT name, rss_url as rssUrl, category FROM sources WHERE active = 1 ORDER BY name`).all() as Array<{ name: string; rssUrl: string; category: string }>;
+
+  console.log(`[SCRAPER] Starting full RSS scrape of ${rows.length} sources (concurrency ${SCRAPE_CONCURRENCY})...`);
+
   const errors: string[] = [];
   let totalNew = 0;
+  let cursor = 0;
 
-  for (const source of rows) {
-    const result = await scrapeSource(source);
-    if (result.error) {
-      errors.push(`${source.name}: ${result.error}`);
-    } else {
-      console.log(`[SCRAPER] ${source.name}: ${result.new} new / ${result.found} found`);
-      totalNew += result.new;
+  async function worker() {
+    while (cursor < rows.length) {
+      const source = rows[cursor++];
+      const result = await scrapeSource(source);
+      if (result.error) {
+        errors.push(`${source.name}: ${result.error}`);
+      } else {
+        console.log(`[SCRAPER] ${source.name}: ${result.new} new / ${result.found} found`);
+        totalNew += result.new;
+      }
     }
-    await new Promise((r) => setTimeout(r, 500));
   }
 
-  console.log(`[SCRAPER] Done. ${totalNew} new articles. ${errors.length} errors.`);
+  await Promise.all(
+    Array.from({ length: Math.min(SCRAPE_CONCURRENCY, rows.length) }, () => worker())
+  );
+
+  const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
+  console.log(`[SCRAPER] Done in ${elapsed}s. ${totalNew} new articles. ${errors.length} errors.`);
   return { total: totalNew, errors };
 }
 
