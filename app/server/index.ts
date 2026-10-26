@@ -1,3 +1,4 @@
+import { createRequire } from 'module';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -27,6 +28,10 @@ import {
   buildAiHostAllowlist,
   resolveAiBaseUrl,
 } from './security';
+
+/* Read the version from package.json rather than restating it here: the
+   hardcoded '2.0.0' had drifted from package.json's '0.0.0'. */
+const { version: APP_VERSION } = createRequire(import.meta.url)('../package.json') as { version: string };
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -103,7 +108,7 @@ app.get('/', (req, res) => {
 app.get('/api', (req, res) => {
   res.json({
     name: 'CyberPulse API',
-    version: '2.0.0',
+    version: APP_VERSION,
     description: 'Cybersecurity news aggregator + LinkedIn post generator',
     endpoints: {
       news: '/api/news',

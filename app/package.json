@@ -1,7 +1,7 @@
 {
-  "name": "my-app",
+  "name": "cyberpulse",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npx tsx server/index.ts\" \"vite\"",
@@ -92,5 +92,7 @@
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
     "vitest": "^3.2.7"
-  }
+  },
+  "description": "Cybersecurity news aggregator with a LinkedIn post generator",
+  "license": "MIT"
 }
