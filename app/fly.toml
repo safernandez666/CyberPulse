@@ -1,0 +1,54 @@
+# =============================================================================
+# CyberPulse — Fly.io
+#
+# Before the first deploy:
+#   fly launch --no-deploy --copy-config
+#   fly volumes create cyberpulse_data --size 1 --region eze
+#   fly secrets set CYBERPULSE_API_KEY=$(openssl rand -hex 32) \
+#                   CYBERPULSE_SECRET=$(openssl rand -hex 32)
+#   fly deploy
+# =============================================================================
+
+app = "cyberpulse"
+primary_region = "eze"   # Buenos Aires; see `fly platform regions`
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+  # Rate limiting needs the real client IP, which Fly passes in X-Forwarded-For.
+  TRUST_PROXY = "1"
+  SCRAPE_CRON = "*/15 * * * *"
+
+# The SQLite database lives here. Without this the data is lost on every deploy.
+[[mounts]]
+  source = "cyberpulse_data"
+  destination = "/app/data"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # CyberPulse scrapes on a schedule, so the machine has to stay awake.
+  # Letting Fly stop it would silently stop the cron.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[http_service.checks]]
+  interval = "30s"
+  timeout = "5s"
+  grace_period = "120s"   # the first scrape runs at boot
+  method = "GET"
+  path = "/api/health"
+
+[[vm]]
+  # better-sqlite3 plus ~100 concurrent feed fetches; 512 MB is comfortable.
+  size = "shared-cpu-1x"
+  memory = "512mb"

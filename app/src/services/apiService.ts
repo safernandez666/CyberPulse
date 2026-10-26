@@ -210,8 +210,12 @@ export interface LinkedInConfigPayload {
   redirectUri: string;
 }
 
+/* A public deployment answers 401 to visitors without the API key. That is
+   the expected state for them, not a failure: report it as "nothing
+   configured" so the UI hides the LinkedIn controls instead of erroring. */
 export async function getLinkedInConfig(): Promise<{ configured: boolean }> {
   const res = await fetch('/api/linkedin/config', { headers: cyberpulseHeaders() });
+  if (res.status === 401) return { configured: false };
   if (!res.ok) throw new Error(`LinkedIn config error: ${res.status}`);
   return res.json();
 }
@@ -257,6 +261,9 @@ export interface LinkedInStatus {
 
 export async function getLinkedInStatus(): Promise<LinkedInStatus> {
   const res = await fetch('/api/linkedin/status', { headers: cyberpulseHeaders() });
+  if (res.status === 401) {
+    return { configured: false, connected: false, personUrn: null, personId: null };
+  }
   if (!res.ok) throw new Error(`LinkedIn status error: ${res.status}`);
   return res.json();
 }

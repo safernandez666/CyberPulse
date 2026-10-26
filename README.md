@@ -34,6 +34,7 @@
 - [Repository structure](#repository-structure)
 - [Additional documentation](#additional-documentation)
 - [Screenshots](#screenshots)
+- [Deploying it publicly](#deploying-it-publicly)
 - [Development](#development)
 - [License](#license)
 
@@ -458,6 +459,64 @@ Verified unreachable, so they ship disabled rather than costing a request on eve
 | VulDB | HTTP 403 (bot protection) |
 | Yassine Aboukir | malformed XML entity |
 
+## Deploying it publicly
+
+CyberPulse is a long-lived process with a SQLite file and a cron, so it needs
+a container with a disk — **not** a serverless platform. Vercel and similar
+cannot run it: the filesystem is ephemeral, so the database would be wiped,
+and there is no process alive between requests for the scraper to run in.
+
+Fly.io, Railway, Render or any small VPS all work. A `fly.toml` is included.
+
+### What a public deployment changes
+
+Reads stay open — anyone can browse the feed. Everything that writes, touches
+LinkedIn, calls an AI provider or triggers a scrape requires the API key. You
+enter it once under **Settings → CyberPulse API Key**; visitors without it
+simply do not see those controls.
+
+Two settings are not optional once the app is reachable from the internet:
+
+```bash
+CYBERPULSE_API_KEY=$(openssl rand -hex 32)   # without it, anyone could post to your LinkedIn
+CYBERPULSE_SECRET=$(openssl rand -hex 32)    # encrypts the stored LinkedIn credentials
+```
+
+The server refuses to start with `NODE_ENV=production` and no API key. If you
+genuinely want it open, set `CYBERPULSE_ALLOW_NO_AUTH=true` and understand
+that LinkedIn publishing is then unauthenticated.
+
+Keep `CYBERPULSE_SECRET` safe: lose it and the stored LinkedIn connection
+cannot be decrypted, and you will have to disconnect and reconnect.
+
+### Fly.io
+
+```bash
+cd app
+fly launch --no-deploy --copy-config
+fly volumes create cyberpulse_data --size 1 --region eze
+fly secrets set CYBERPULSE_API_KEY=$(openssl rand -hex 32) \
+                CYBERPULSE_SECRET=$(openssl rand -hex 32)
+fly deploy
+```
+
+The volume is what makes the database survive a deploy, and
+`auto_stop_machines = false` is what keeps the scraper running — a stopped
+machine silently stops collecting.
+
+Set the LinkedIn redirect URI to `https://<your-app>/api/linkedin/callback`
+in both the LinkedIn Developer console and `LINKEDIN_REDIRECT_URI`.
+
+### Hardening already in place
+
+- Non-root container (uid 1000), no compiler or shell tooling in the runtime image.
+- `helmet` security headers including a content security policy.
+- Rate limiting: 300 reads and 20 writes per minute per IP.
+- CORS restricted to same-origin unless `CYBERPULSE_CORS_ORIGINS` says otherwise.
+- The AI proxy only reaches an allowlist of provider hosts over https.
+
+---
+
 ## Development
 
 ```bash
@@ -534,6 +593,11 @@ A few captures of CyberPulse in action. Click any image to view it full size.
 | `CYBERPULSE_CORS_ORIGINS` | same-origin only | Comma-separated extra browser origins allowed to call the API. `*` disables the check — only sensible behind your own auth |
 | `CYBERPULSE_AI_HOSTS` | *(see below)* | Comma-separated extra hosts the AI proxy may call. Defaults cover OpenAI, Groq, Anthropic, Mistral, Together, DeepSeek, OpenRouter and Google |
 | `CYBERPULSE_MAX_NEWS` | `20000` | Hard ceiling on `limit` for `GET /api/news` |
+| `CYBERPULSE_SECRET` | `null` | Encrypts the LinkedIn token and client secret at rest (AES-256-GCM). Without it they are stored in clear text. Generate with `openssl rand -hex 32` |
+| `CYBERPULSE_ALLOW_NO_AUTH` | `false` | Lets the server start in production without an API key. Every write endpoint is then unauthenticated |
+| `CYBERPULSE_RATE_READ` | `300` | Read requests allowed per minute per IP |
+| `CYBERPULSE_RATE_WRITE` | `20` | Write requests allowed per minute per IP |
+| `TRUST_PROXY` | `null` | Set to `1` behind a reverse proxy so rate limiting sees the real client IP |
 | `NODE_ENV` | `production` | Node environment |
 
 ---

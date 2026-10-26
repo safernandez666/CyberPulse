@@ -1,6 +1,8 @@
 import { createRequire } from 'module';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import cron from 'node-cron';
 import { getDb } from './db';
@@ -28,6 +30,7 @@ import {
   buildAiHostAllowlist,
   resolveAiBaseUrl,
 } from './security';
+import { isEncryptionEnabled } from './crypto';
 
 /* Read the version from package.json rather than restating it here: the
    hardcoded '2.0.0' had drifted from package.json's '0.0.0'. */
@@ -36,6 +39,26 @@ const { version: APP_VERSION } = createRequire(import.meta.url)('../package.json
 const app = express();
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.CYBERPULSE_API_KEY || null;
+
+/* Without a key every write endpoint is open, which is survivable on a laptop
+   and not survivable on the open internet: anyone reaching /api/linkedin/post
+   would publish as the connected account. Refuse to start instead of quietly
+   exposing it; CYBERPULSE_ALLOW_NO_AUTH=true is the deliberate opt-out. */
+if (process.env.NODE_ENV === 'production' && !API_KEY) {
+  if (process.env.CYBERPULSE_ALLOW_NO_AUTH === 'true') {
+    console.warn(
+      '[SERVER] WARNING: running in production with no CYBERPULSE_API_KEY. ' +
+      'Every write endpoint, including LinkedIn publishing, is unauthenticated.'
+    );
+  } else {
+    console.error(
+      '[SERVER] Refusing to start: NODE_ENV=production requires CYBERPULSE_API_KEY.\n' +
+      '         Generate one with:  openssl rand -hex 32\n' +
+      '         To start anyway (not recommended), set CYBERPULSE_ALLOW_NO_AUTH=true.'
+    );
+    process.exit(1);
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /*  Middleware                                                         */
@@ -58,6 +81,50 @@ const ALLOWED_ORIGINS = (process.env.CYBERPULSE_CORS_ORIGINS || '')
 
 const CORS_ALLOW_ALL = ALLOWED_ORIGINS.includes('*');
 const corsOrigins = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
+
+/* Behind Fly/Railway/a reverse proxy the client IP arrives in
+   X-Forwarded-For; without this the rate limiter buckets everyone together. */
+if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY);
+
+app.use(helmet({
+  /* The SPA ships its own styles and Google Fonts; the OAuth result page sets
+     its own stricter policy inline. */
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
+
+const RATE_WINDOW_MS = 60_000;
+const readLimiter = rateLimit({
+  windowMs: RATE_WINDOW_MS,
+  limit: parseInt(process.env.CYBERPULSE_RATE_READ || '', 10) || 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests, slow down.' },
+});
+
+/* Writes touch LinkedIn, an upstream AI provider or a full scrape, so they get
+   a much tighter budget than reads. */
+const writeLimiter = rateLimit({
+  windowMs: RATE_WINDOW_MS,
+  limit: parseInt(process.env.CYBERPULSE_RATE_WRITE || '', 10) || 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many requests, slow down.' },
+});
+
+app.use('/api', readLimiter);
 
 app.use(cors((req, callback) => {
   const origin = req.headers.origin;
@@ -254,7 +321,7 @@ app.get('/api/sources', (req, res) => {
   }
 });
 
-app.post('/api/sources', checkApiKey, (req, res) => {
+app.post('/api/sources', writeLimiter, checkApiKey, (req, res) => {
   try {
     const { name, rssUrl, category } = req.body;
     if (
@@ -290,7 +357,7 @@ app.post('/api/sources', checkApiKey, (req, res) => {
   }
 });
 
-app.delete('/api/sources/:id', checkApiKey, (req, res) => {
+app.delete('/api/sources/:id', writeLimiter, checkApiKey, (req, res) => {
   try {
     const db = getDb();
     const result = db.prepare(`DELETE FROM sources WHERE id = ? AND custom = 1`).run(req.params.id);
@@ -303,7 +370,7 @@ app.delete('/api/sources/:id', checkApiKey, (req, res) => {
   }
 });
 
-app.patch('/api/sources/:id', checkApiKey, (req, res) => {
+app.patch('/api/sources/:id', writeLimiter, checkApiKey, (req, res) => {
   try {
     const { active } = req.body;
     if (typeof active !== 'boolean') {
@@ -334,7 +401,7 @@ app.patch('/api/sources/:id', checkApiKey, (req, res) => {
 /*  Post Generation                                                    */
 /* ------------------------------------------------------------------ */
 
-app.post('/api/generate', checkApiKey, (req, res) => {
+app.post('/api/generate', writeLimiter, checkApiKey, (req, res) => {
   try {
     const body = req.body as GeneratePostRequest;
     if (!body.articleId || !body.title || !body.summary) {
@@ -349,7 +416,7 @@ app.post('/api/generate', checkApiKey, (req, res) => {
 });
 
 // Daily Digest generation
-app.post('/api/digest', checkApiKey, (req, res) => {
+app.post('/api/digest', writeLimiter, checkApiKey, (req, res) => {
   try {
     const { articles, tone, length, language } = req.body;
     if (!articles || !Array.isArray(articles) || articles.length === 0) {
@@ -385,7 +452,7 @@ interface GenerateAiRequest {
 
 const AI_HOST_ALLOWLIST = buildAiHostAllowlist(process.env.CYBERPULSE_AI_HOSTS);
 
-app.post('/api/generate-ai', checkApiKey, async (req, res) => {
+app.post('/api/generate-ai', writeLimiter, checkApiKey, async (req, res) => {
   try {
     const body = req.body as GenerateAiRequest;
     const { title, summary, source, category, severity, url, tone, format, length, language, apiKey, model, baseUrl } = body;
@@ -477,7 +544,7 @@ app.get('/api/linkedin/config', checkApiKey, (req, res) => {
   }
 });
 
-app.post('/api/linkedin/config', checkApiKey, (req, res) => {
+app.post('/api/linkedin/config', writeLimiter, checkApiKey, (req, res) => {
   try {
     const { clientId, clientSecret, redirectUri } = req.body;
     if (!clientId || !clientSecret) {
@@ -496,7 +563,7 @@ app.post('/api/linkedin/config', checkApiKey, (req, res) => {
   }
 });
 
-app.delete('/api/linkedin/config', checkApiKey, (req, res) => {
+app.delete('/api/linkedin/config', writeLimiter, checkApiKey, (req, res) => {
   try {
     deleteLinkedInConfig();
     res.json({ success: true });
@@ -505,7 +572,7 @@ app.delete('/api/linkedin/config', checkApiKey, (req, res) => {
   }
 });
 
-app.get('/api/linkedin/auth-url', checkApiKey, (req, res) => {
+app.get('/api/linkedin/auth-url', writeLimiter, checkApiKey, (req, res) => {
   try {
     const url = getAuthorizationUrl();
     res.json({ url });
@@ -514,7 +581,7 @@ app.get('/api/linkedin/auth-url', checkApiKey, (req, res) => {
   }
 });
 
-app.get('/api/linkedin/callback', async (req, res) => {
+app.get('/api/linkedin/callback', writeLimiter, async (req, res) => {
   /* The opener is the CyberPulse UI, which is served from this same origin. */
   const appOrigin = `${req.protocol}://${req.get('host')}`;
 
@@ -564,7 +631,7 @@ app.get('/api/linkedin/status', checkApiKey, (req, res) => {
   }
 });
 
-app.post('/api/linkedin/disconnect', checkApiKey, (req, res) => {
+app.post('/api/linkedin/disconnect', writeLimiter, checkApiKey, (req, res) => {
   try {
     deleteToken();
     res.json({ success: true });
@@ -573,7 +640,7 @@ app.post('/api/linkedin/disconnect', checkApiKey, (req, res) => {
   }
 });
 
-app.post('/api/linkedin/post', checkApiKey, async (req, res) => {
+app.post('/api/linkedin/post', writeLimiter, checkApiKey, async (req, res) => {
   try {
     const { text, visibility } = req.body;
     if (!text || typeof text !== 'string') {
@@ -631,7 +698,7 @@ function renderOAuthResult(
 /*  MCP (Model Context Protocol) — Single endpoint for AI agents       */
 /* ------------------------------------------------------------------ */
 
-app.post('/api/mcp', checkApiKey, async (req, res) => {
+app.post('/api/mcp', writeLimiter, checkApiKey, async (req, res) => {
   try {
     const { action, params } = req.body;
 
@@ -760,7 +827,7 @@ app.get('/api/scrape/status', (req, res) => {
   }
 });
 
-app.post('/api/scrape', checkApiKey, async (req, res) => {
+app.post('/api/scrape', writeLimiter, checkApiKey, async (req, res) => {
   try {
     // Start scraping in the background and respond immediately
     runScrape().catch((err) => console.error('[SCRAPER] Failed to start scrape:', err));
@@ -850,6 +917,7 @@ async function start() {
     console.log(`[SERVER] API: http://localhost:${PORT}/api/news`);
     console.log(`[SERVER] API Key: ${API_KEY ? 'enabled' : 'disabled (set CYBERPULSE_API_KEY env var to enable)'}`);
     console.log(`[SERVER] MCP Endpoint: http://localhost:${PORT}/api/mcp`);
+    console.log(`[SERVER] Credentials at rest: ${isEncryptionEnabled() ? 'encrypted' : 'PLAIN TEXT (set CYBERPULSE_SECRET)'}`);
   });
 }
 

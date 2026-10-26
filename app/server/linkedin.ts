@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { encryptSecret, decryptSecret } from './crypto';
 
 const LINKEDIN_AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization';
 const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
@@ -57,7 +58,7 @@ export function getLinkedInConfig(): LinkedInConfig | null {
 
   return {
     clientId: row.client_id,
-    clientSecret: row.client_secret,
+    clientSecret: decryptSecret(row.client_secret),
     redirectUri: row.redirect_uri || 'http://localhost:3001/api/linkedin/callback',
   };
 }
@@ -68,7 +69,7 @@ export function saveLinkedInConfig(config: LinkedInConfig): void {
   db.prepare(`
     INSERT INTO linkedin_config (client_id, client_secret, redirect_uri, updated_at)
     VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(config.clientId, config.clientSecret, config.redirectUri);
+  `).run(config.clientId, encryptSecret(config.clientSecret), config.redirectUri);
 }
 
 export function deleteLinkedInConfig(): void {
@@ -87,7 +88,7 @@ export function getStoredToken(): StoredTokenRow | null {
     return null;
   }
 
-  return row;
+  return { ...row, access_token: decryptSecret(row.access_token) };
 }
 
 export function saveToken(accessToken: string, expiresIn: number, personId: string, personUrn: string): void {
@@ -97,7 +98,7 @@ export function saveToken(accessToken: string, expiresIn: number, personId: stri
   db.prepare(`
     INSERT INTO linkedin_tokens (access_token, expires_at, person_id, person_urn, updated_at)
     VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-  `).run(accessToken, expiresAt, personId, personUrn);
+  `).run(encryptSecret(accessToken), expiresAt, personId, personUrn);
 }
 
 export function deleteToken(): void {
