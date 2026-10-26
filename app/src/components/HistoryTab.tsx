@@ -434,16 +434,26 @@ function HistoryCard({
               </span>
             </div>
 
-            {/* Source Article Link */}
-            <a
-              href={post.sourceArticleUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mt-3 text-xs font-inter text-text-secondary hover:text-accent transition-colors duration-200"
-            >
-              <ExternalLink size={12} />
-              <span className="truncate">{post.sourceArticleTitle}</span>
-            </a>
+            {/* Source Article Link. A digest covers several articles and has
+                no single source, and older entries were saved with an empty
+                string — which renders as href="" and quietly reloads the page
+                instead of going anywhere. Only link when there is a link. */}
+            {post.sourceArticleUrl && post.sourceArticleUrl !== '#' ? (
+              <a
+                href={post.sourceArticleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mt-3 text-xs font-inter text-text-secondary hover:text-accent transition-colors duration-200"
+              >
+                <ExternalLink size={12} />
+                <span className="truncate">{post.sourceArticleTitle}</span>
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 mt-3 text-xs font-inter text-text-tertiary">
+                <ExternalLink size={12} aria-hidden="true" />
+                <span className="truncate">{post.sourceArticleTitle}</span>
+              </span>
+            )}
 
             {/* Expanded Actions */}
             <div className="flex items-center gap-3 mt-4">

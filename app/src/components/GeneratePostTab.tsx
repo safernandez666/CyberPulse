@@ -1867,13 +1867,18 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
             {labels.backToNews}
           </Button>
           {!isDailyDigest && (
+            /* A real anchor rather than window.open: middle-click and "copy
+               link address" work, and the article — which comes from a
+               third-party feed — never gets a handle on window.opener. */
             <Button
+              asChild
               variant="outline"
               className="border-[#222222] text-[#E5E5E5] hover:bg-[#181818] hover:border-[#808080] font-inter text-sm font-medium px-4 py-2 h-auto rounded-button bg-transparent"
-              onClick={() => window.open(selectedArticle.url, '_blank')}
             >
-              {labels.openOriginal}
-              <ExternalLink size={16} />
+              <a href={selectedArticle.url} target="_blank" rel="noopener noreferrer">
+                {labels.openOriginal}
+                <ExternalLink size={16} />
+              </a>
             </Button>
           )}
           {isDailyDigest && (

@@ -529,9 +529,20 @@ const NewsCard = memo(function NewsCard({ article, isSelected, isHot, onClick }:
         </span>
       </div>
 
-      {/* Row 2: Title */}
-      <h3 className="text-base font-semibold text-text-primary font-inter leading-snug tracking-tight line-clamp-2 mb-1">
-        {article.title}
+      {/* Row 2: Title — clicking the card opens the post generator, which is
+          not what someone reaching for a headline expects. The title itself
+          links to the article, the way any reader does it. */}
+      <h3 className="text-base font-semibold font-inter leading-snug tracking-tight line-clamp-2 mb-1">
+        <a
+          href={article.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title="Read the original article"
+          className="text-text-primary hover:text-accent hover:underline decoration-1 underline-offset-2 transition-colors"
+        >
+          {article.title}
+        </a>
       </h3>
 
       {/* Row 3: Publish date */}
