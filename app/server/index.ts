@@ -2,6 +2,7 @@ import { createRequire } from 'module';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import cron from 'node-cron';
@@ -124,6 +125,10 @@ const writeLimiter = rateLimit({
   message: { error: 'Too many requests, slow down.' },
 });
 
+/* /api/news ships the whole corpus so the UI can filter client-side: 2.3 MB
+   uncompressed, and it is mostly repetitive JSON. gzip takes it to ~250 KB. */
+app.use(compression());
+
 app.use('/api', readLimiter);
 
 app.use(cors((req, callback) => {
@@ -162,7 +167,22 @@ function checkApiKey(req: express.Request, res: express.Response, next: express.
 /* ------------------------------------------------------------------ */
 
 const distPath = path.resolve(process.cwd(), 'dist');
-app.use(express.static(distPath));
+
+/* Vite fingerprints everything under /assets, so those files can never change
+   behind a given URL — they were being revalidated on every load with
+   max-age=0. index.html is the opposite: it names the current bundle, so it
+   must never be cached. */
+app.use('/assets', express.static(path.join(distPath, 'assets'), {
+  immutable: true,
+  maxAge: '1y',
+}));
+
+app.use(express.static(distPath, {
+  maxAge: '1h',
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));

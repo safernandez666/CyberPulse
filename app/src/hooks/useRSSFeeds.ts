@@ -168,15 +168,25 @@ export function useRSSFeeds(): UseRSSFeedsReturn {
     try {
       await scrapeSources();
 
-      // Poll the backend until scraping finishes
+      /* Poll the cheap status endpoint, and only pull the article list when
+         the count has actually moved. Refreshing on every tick re-downloaded
+         the whole corpus — megabytes — every 5 s for the length of a scrape,
+         almost always to render the same thing again. */
+      let lastSeenNew = -1;
       syncIntervalRef.current = setInterval(async () => {
         try {
           const status = await fetchScrapeStatus();
-          // Refresh the article list periodically so the user sees progress
-          await refresh();
+          const newCount = status.lastResult?.totalNew ?? 0;
 
           if (!status.scraping) {
+            await refresh();
             stopSyncPolling(status.lastResult);
+            return;
+          }
+
+          if (newCount !== lastSeenNew) {
+            lastSeenNew = newCount;
+            await refresh();
           }
         } catch (err) {
           console.error('[RSS] Sync polling failed:', err);

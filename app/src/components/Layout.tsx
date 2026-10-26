@@ -1,16 +1,30 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { TabId } from './Navbar';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import NewsFeedTab from './NewsFeedTab';
-import GeneratePostTab from './GeneratePostTab';
-import HistoryTab from './HistoryTab';
+
+/* Only the news feed is needed to paint the first screen. The generator is
+   the biggest component in the app and the history tab is rarely the landing
+   view, so both load on demand. */
+const GeneratePostTab = lazy(() => import('./GeneratePostTab'));
+const HistoryTab = lazy(() => import('./HistoryTab'));
 import type { SourceInfo } from '@/hooks/useRSSFeeds';
 import { Menu } from 'lucide-react';
 import SettingsPanel from './SettingsPanel';
 import { useRSSFeeds } from '@/hooks/useRSSFeeds';
 import { countArticlesBySource, type TimeRange } from '@/lib/timeRange';
+
+function TabLoading() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <span className="text-[11px] font-jetbrains uppercase tracking-[0.08em] text-text-tertiary">
+        Loading…
+      </span>
+    </div>
+  );
+}
 
 const tabContentVariants = {
   initial: { opacity: 0, y: 8 },
@@ -100,15 +114,20 @@ export default function Layout() {
         );
       case 'generate':
         return (
-          <GeneratePostTab
-            key="generate"
-            articles={articles}
-            selectedArticleId={selectedArticleId}
-            onBackToNewsFeed={() => setActiveTab('news')}
-          />
+          <Suspense key="generate" fallback={<TabLoading />}>
+            <GeneratePostTab
+              articles={articles}
+              selectedArticleId={selectedArticleId}
+              onBackToNewsFeed={() => setActiveTab('news')}
+            />
+          </Suspense>
         );
       case 'history':
-        return <HistoryTab key="history" />;
+        return (
+          <Suspense key="history" fallback={<TabLoading />}>
+            <HistoryTab />
+          </Suspense>
+        );
       default:
         return null;
     }

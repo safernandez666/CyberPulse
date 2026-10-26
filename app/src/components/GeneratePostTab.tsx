@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { loadPostFont } from '@/lib/loadPostFont';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
@@ -2218,3 +2219,7 @@ export default function GeneratePostTab({ articles, selectedArticleId: propArtic
     </div>
   );
 }
+
+/* The chunk only evaluates when this tab is opened, which is exactly when
+   the post font becomes visible. */
+loadPostFont();

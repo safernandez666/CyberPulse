@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Search, Clock, RefreshCw, RotateCcw, CloudDownload, ExternalLink, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -64,10 +64,18 @@ export default function NewsFeedTab({
   onTimeRangeChange,
 }: NewsFeedTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  /* Filtering runs over every article and re-renders the whole grid, so the
+     raw keystroke value drives the input and a settled copy drives the work. */
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchQuery), 180);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
 
   const categories = useMemo(
     () => Array.from(new Set(articles.map((a) => a.category))).sort(),
@@ -106,7 +114,10 @@ export default function NewsFeedTab({
   }, [heatScores]);
 
   const filteredAndSorted = useMemo(() => {
-    let filtered = articles.filter((a) => activeSources.includes(a.source));
+    /* `activeSources` is an array of ~100 names; Array.includes inside a
+       filter over thousands of articles is a linear scan per article. */
+    const activeSet = new Set(activeSources);
+    let filtered = articles.filter((a) => activeSet.has(a.source));
 
     if (selectedCategories.length > 0) {
       filtered = filtered.filter((a) => selectedCategories.includes(a.category));
@@ -115,8 +126,8 @@ export default function NewsFeedTab({
     const cutoffMs = rangeCutoff(timeRange);
     filtered = filtered.filter((a) => isWithinRange(a, cutoffMs));
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       filtered = filtered.filter(
         (a) =>
           a.title.toLowerCase().includes(q) ||
@@ -148,7 +159,7 @@ export default function NewsFeedTab({
     }
 
     return sorted;
-  }, [articles, activeSources, selectedCategories, searchQuery, sortBy, heatScores, timeRange]);
+  }, [articles, activeSources, selectedCategories, debouncedSearch, sortBy, heatScores, timeRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
   const startIndex = (page - 1) * pageSize;
@@ -156,7 +167,7 @@ export default function NewsFeedTab({
 
   useEffect(() => {
     setPage(1);
-  }, [activeSources, selectedCategories, searchQuery, sortBy, pageSize, timeRange]);
+  }, [activeSources, selectedCategories, debouncedSearch, sortBy, pageSize, timeRange]);
 
   // Show toast when a sync finishes
   useEffect(() => {
@@ -468,7 +479,10 @@ interface NewsCardProps {
   onClick: () => void;
 }
 
-function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
+/* 50 cards re-rendered on every parent state change — a keystroke, a filter,
+   a poll. Their props are primitives plus a stable article object, so a
+   shallow comparison keeps all but the genuinely changed ones still. */
+const NewsCard = memo(function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
   const dotColor = severityColor[article.severity] || 'bg-medium';
 
   return (
@@ -564,4 +578,4 @@ function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
     </motion.article>
 
   );
-}
+});

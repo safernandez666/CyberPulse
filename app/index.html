@@ -7,7 +7,10 @@
     <link rel="icon" type="image/svg+xml" href="/pulse-logo.svg" sizes="any" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Inter and JetBrains Mono are the interface fonts: needed for first paint. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <!-- Merriweather only styles generated post bodies, so it is requested by
+         the tabs that use them (src/lib/loadPostFont.ts), not on first paint. -->
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { loadPostFont } from '@/lib/loadPostFont';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -683,3 +684,7 @@ export default function HistoryTab() {
     </div>
   );
 }
+
+/* The chunk only evaluates when this tab is opened, which is exactly when
+   the post font becomes visible. */
+loadPostFont();

@@ -17,6 +17,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /* Split the vendor code out of the app chunk: React and the animation
+           library change far less often than CyberPulse does, so a release
+           stops invalidating them in everyone's cache. */
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router'],
+          motion: ['framer-motion'],
+        },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
