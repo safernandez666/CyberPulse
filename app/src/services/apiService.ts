@@ -37,7 +37,7 @@ function cyberpulseHeaders(): Record<string, string> {
 }
 
 export async function fetchApiNews(): Promise<NewsArticle[]> {
-  const res = await fetch('/api/news?limit=1000');
+  const res = await fetch('/api/news?limit=20000');
   if (!res.ok) throw new Error(`News API error: ${res.status}`);
   const data: ApiNewsResponse = await res.json();
   return data.articles || [];

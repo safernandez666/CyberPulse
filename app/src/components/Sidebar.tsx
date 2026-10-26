@@ -1,9 +1,18 @@
 import { motion } from 'framer-motion';
-import { X, Power } from 'lucide-react';
+import { X, Power, AlertTriangle } from 'lucide-react';
 import type { SourceInfo } from '@/hooks/useRSSFeeds';
 
+/* `count` is how many articles the source contributes to the window currently
+   shown in the feed. A source can legitimately be quiet — Project Zero and ZDI
+   post rarely — so 0 here is not a fault. `neverDelivered` marks the real
+   problem: a feed that has never produced a single article. */
+export interface SidebarSource extends SourceInfo {
+  lifetimeCount?: number;
+  neverDelivered?: boolean;
+}
+
 interface SidebarProps {
-  sources: SourceInfo[];
+  sources: SidebarSource[];
   onToggleSource: (id: string) => void;
   onToggleAll?: (active: boolean) => void;
   onClose?: () => void;
@@ -105,14 +114,38 @@ export default function Sidebar({ sources, onToggleSource, onToggleAll, onClose 
             </div>
 
             {/* Source Name */}
-            <span className="flex-1 text-[13px] font-medium text-text-primary font-inter truncate">
+            <span
+              className={`
+                flex-1 text-[13px] font-medium font-inter truncate
+                ${source.neverDelivered ? 'text-text-tertiary line-through decoration-1' : 'text-text-primary'}
+              `}
+            >
               {source.name}
             </span>
 
-            {/* Article Count */}
-            <span className="text-xs font-normal font-jetbrains text-text-tertiary">
-              {source.count}
-            </span>
+            {source.neverDelivered ? (
+              <span
+                className="flex items-center gap-1 text-[10px] font-jetbrains uppercase tracking-[0.06em] text-high shrink-0"
+                title="This feed has never returned an article — the URL is probably dead"
+              >
+                <AlertTriangle size={11} aria-hidden="true" />
+                No data
+              </span>
+            ) : (
+              <span
+                className={`
+                  text-xs font-normal font-jetbrains shrink-0
+                  ${source.count === 0 ? 'text-[#4A4A4A]' : 'text-text-tertiary'}
+                `}
+                title={
+                  source.count === 0
+                    ? `Nothing in the selected window (${source.lifetimeCount ?? 0} stored in total)`
+                    : undefined
+                }
+              >
+                {source.count}
+              </span>
+            )}
           </motion.div>
         ))}
       </div>

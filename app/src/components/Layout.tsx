@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { TabId } from './Navbar';
 import Navbar from './Navbar';
@@ -10,6 +10,7 @@ import type { SourceInfo } from '@/hooks/useRSSFeeds';
 import { Menu } from 'lucide-react';
 import SettingsPanel from './SettingsPanel';
 import { useRSSFeeds } from '@/hooks/useRSSFeeds';
+import { countArticlesBySource, type TimeRange } from '@/lib/timeRange';
 
 const tabContentVariants = {
   initial: { opacity: 0, y: 8 },
@@ -23,6 +24,9 @@ export default function Layout() {
   const [localSources, setLocalSources] = useState<SourceInfo[]>(sources);
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  /* Lives here rather than in NewsFeedTab so the sidebar counts describe the
+     same window the feed is showing. */
+  const [timeRange, setTimeRange] = useState<TimeRange>('all');
 
   useEffect(() => {
     if (sources.length === 0) return;
@@ -50,6 +54,21 @@ export default function Layout() {
     );
   }, []);
 
+  const effectiveSources = localSources.length > 0 ? localSources : sources;
+
+  /* Replace the database-wide lifetime count with what is actually visible in
+     the current window, and keep the lifetime figure so a source that has
+     never produced anything can be told apart from one that is merely quiet. */
+  const sourcesForSidebar = useMemo(() => {
+    const windowCounts = countArticlesBySource(articles, timeRange);
+    return effectiveSources.map((s) => ({
+      ...s,
+      count: windowCounts.get(s.name) ?? 0,
+      lifetimeCount: s.count,
+      neverDelivered: s.count === 0,
+    }));
+  }, [effectiveSources, articles, timeRange]);
+
   const handleSelectArticle = useCallback((id: string) => {
     setSelectedArticleId(id);
     setActiveTab('generate');
@@ -70,11 +89,13 @@ export default function Layout() {
             onRefresh={refresh}
             onForceReload={forceReload}
             onSyncFeeds={syncFeeds}
-            activeSources={(localSources.length > 0 ? localSources : sources)
+            activeSources={effectiveSources
               .filter((s) => s.active)
               .map((s) => s.name)}
             onSelectArticle={handleSelectArticle}
             selectedArticleId={selectedArticleId}
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
           />
         );
       case 'generate':
@@ -112,7 +133,7 @@ export default function Layout() {
         `}
       >
         <Sidebar
-          sources={localSources.length > 0 ? localSources : sources}
+          sources={sourcesForSidebar}
           onToggleSource={handleToggleSource}
           onToggleAll={handleToggleAllSources}
           onClose={() => setSidebarOpen(false)}

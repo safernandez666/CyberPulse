@@ -48,15 +48,38 @@ const ALLOWED_ORIGINS = (process.env.CYBERPULSE_CORS_ORIGINS || '')
 const CORS_ALLOW_ALL = ALLOWED_ORIGINS.includes('*');
 const corsOrigins = ALLOWED_ORIGINS.length > 0 ? ALLOWED_ORIGINS : DEFAULT_ALLOWED_ORIGINS;
 
-app.use(cors({
-  origin(origin, callback) {
+/* PORT is what the server binds to, not necessarily what the browser dialled:
+   a Docker port mapping or a reverse proxy changes it. Comparing the Origin
+   against the request's own Host is what actually identifies a same-origin
+   request, and `<script type="module">` is fetched with CORS, so getting this
+   wrong 403s the app's own JavaScript. */
+function isSameOrigin(origin: string, host: string | undefined): boolean {
+  if (!host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+app.use(cors((req, callback) => {
+  const origin = req.headers.origin;
+  const allowed =
     // Same-origin / non-browser clients (curl, MCP agents) send no Origin.
-    if (!origin) return callback(null, true);
-    if (CORS_ALLOW_ALL || corsOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error(`Origin not allowed by CORS: ${origin}`));
-  },
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
+    !origin ||
+    CORS_ALLOW_ALL ||
+    isSameOrigin(origin, req.headers.host) ||
+    corsOrigins.includes(origin);
+
+  if (!allowed) {
+    return callback(new Error(`Origin not allowed by CORS: ${origin}`), {});
+  }
+
+  callback(null, {
+    origin: true,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'X-API-Key', 'Authorization'],
+  });
 }));
 app.use(express.json({ limit: '2mb' }));
 
@@ -135,7 +158,12 @@ app.get('/api/news', (req, res) => {
   try {
     const db = getDb();
     const sources = req.query.sources as string | undefined;
-    const limit = Math.min(parseInt(req.query.limit as string) || 50, 1000);
+    /* The UI filters by source client-side, so a global cap silently hides
+       whole sources whose articles are older than the cut-off: their count
+       showed 10 while the feed showed nothing. Retention keeps 100 per source,
+       so the real ceiling is bounded and small enough to serve locally. */
+    const MAX_NEWS_LIMIT = parseInt(process.env.CYBERPULSE_MAX_NEWS || '', 10) || 20000;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, MAX_NEWS_LIMIT);
     const search = req.query.search as string | undefined;
 
     let query = `SELECT * FROM articles`;
@@ -167,6 +195,9 @@ app.get('/api/news', (req, res) => {
       severity: row.severity,
       category: row.category,
       publishedAt: timeAgo(row.published_at),
+      /* The two fields above are display strings ("2 HRS AGO"). The client
+         needs the real instant to sort and filter by date. */
+      publishedAtIso: row.published_at,
       publishDate: publishDate(row.published_at),
       readTime: row.read_time,
       url: row.url,
@@ -193,6 +224,7 @@ app.get('/api/news/:id', (req, res) => {
       severity: row.severity,
       category: row.category,
       publishedAt: timeAgo(row.published_at),
+      publishedAtIso: row.published_at,
       publishDate: publishDate(row.published_at),
       readTime: row.read_time,
       url: row.url,

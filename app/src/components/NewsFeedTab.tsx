@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { Search, Clock, RefreshCw, RotateCcw, CloudDownload, ExternalLink, Thermometer, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { NewsArticle } from '@/data/mockNews';
+import { articleTime, isWithinRange, rangeCutoff, timeRangeOptions, type TimeRange } from '@/lib/timeRange';
 import { timeAgo } from '@/lib/dateUtils';
 
 interface NewsFeedTabProps {
@@ -18,6 +19,8 @@ interface NewsFeedTabProps {
   activeSources: string[];
   onSelectArticle: (id: string) => void;
   selectedArticleId: string | null;
+  timeRange: TimeRange;
+  onTimeRangeChange: (range: TimeRange) => void;
 }
 
 type SortOption = 'relevance' | 'date' | 'severity' | 'source' | 'trending';
@@ -57,6 +60,8 @@ export default function NewsFeedTab({
   activeSources,
   onSelectArticle,
   selectedArticleId,
+  timeRange,
+  onTimeRangeChange,
 }: NewsFeedTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
@@ -107,6 +112,9 @@ export default function NewsFeedTab({
       filtered = filtered.filter((a) => selectedCategories.includes(a.category));
     }
 
+    const cutoffMs = rangeCutoff(timeRange);
+    filtered = filtered.filter((a) => isWithinRange(a, cutoffMs));
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -125,16 +133,10 @@ export default function NewsFeedTab({
         sorted.sort((a, b) => a.source.localeCompare(b.source));
         break;
       case 'date':
-        sorted.sort((a, b) => {
-          const dateA = new Date(a.publishedAt).getTime();
-          const dateB = new Date(b.publishedAt).getTime();
-          // publishedAt may be a relative string (legacy) if the date is unparseable;
-          // in that case fall back to lexicographic comparison.
-          if (isNaN(dateA) || isNaN(dateB)) {
-            return a.publishedAt.localeCompare(b.publishedAt);
-          }
-          return dateB - dateA;
-        });
+        /* Previously sorted on `publishedAt`, which is a display string like
+           "2 HRS AGO" — never a parsable date, so this always fell through to
+           a lexicographic compare and produced a meaningless order. */
+        sorted.sort((a, b) => (articleTime(b) ?? -Infinity) - (articleTime(a) ?? -Infinity));
         break;
       case 'trending':
         sorted.sort((a, b) => (heatScores.get(b.id) || 0) - (heatScores.get(a.id) || 0));
@@ -146,7 +148,7 @@ export default function NewsFeedTab({
     }
 
     return sorted;
-  }, [articles, activeSources, selectedCategories, searchQuery, sortBy, heatScores]);
+  }, [articles, activeSources, selectedCategories, searchQuery, sortBy, heatScores, timeRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
   const startIndex = (page - 1) * pageSize;
@@ -154,7 +156,7 @@ export default function NewsFeedTab({
 
   useEffect(() => {
     setPage(1);
-  }, [activeSources, selectedCategories, searchQuery, sortBy, pageSize]);
+  }, [activeSources, selectedCategories, searchQuery, sortBy, pageSize, timeRange]);
 
   // Show toast when a sync finishes
   useEffect(() => {
@@ -288,6 +290,33 @@ export default function NewsFeedTab({
         </div>
       </div>
 
+      {/* Time range */}
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        <span className="text-[11px] font-medium font-jetbrains uppercase tracking-[0.08em] text-[#555555] mr-1">
+          Window
+        </span>
+        {timeRangeOptions.map((option) => {
+          const active = timeRange === option.key;
+          return (
+            <button
+              key={option.key}
+              onClick={() => onTimeRangeChange(option.key)}
+              aria-pressed={active}
+              className={`
+                px-2.5 py-1 text-[11px] font-medium font-inter rounded-md
+                transition-all duration-200 cursor-pointer
+                ${active
+                  ? 'text-accent bg-accent-dim'
+                  : 'text-text-tertiary hover:text-text-secondary hover:bg-bg-elevated'
+                }
+              `}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Category filters */}
       {categories.length > 0 && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
@@ -366,15 +395,17 @@ export default function NewsFeedTab({
           },
         }}
       >
-        {paginatedArticles.map((article) => (
-          <NewsCard
-            key={article.id}
-            article={article}
-            isSelected={selectedArticleId === article.id}
-            isHot={hotIds.has(article.id)}
-            onClick={() => onSelectArticle(article.id)}
-          />
-        ))}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {paginatedArticles.map((article) => (
+            <NewsCard
+              key={article.id}
+              article={article}
+              isSelected={selectedArticleId === article.id}
+              isHot={hotIds.has(article.id)}
+              onClick={() => onSelectArticle(article.id)}
+            />
+          ))}
+        </AnimatePresence>
       </motion.div>
 
       {filteredAndSorted.length === 0 && (
@@ -446,9 +477,11 @@ function NewsCard({ article, isSelected, isHot, onClick }: NewsCardProps) {
         hidden: { opacity: 0, y: 16 },
         visible: { opacity: 1, y: 0 },
       }}
+      exit={{ opacity: 0, scale: 0.94, y: -8 }}
       transition={{
         duration: 0.35,
         ease: [0, 0, 0.2, 1] as [number, number, number, number],
+        layout: { type: 'spring', stiffness: 420, damping: 38, mass: 0.9 },
       }}
       layout
       onClick={onClick}
