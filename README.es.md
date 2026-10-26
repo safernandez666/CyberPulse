@@ -30,10 +30,11 @@
 - [Uso sin Docker](#uso-sin-docker)
 - [Cómo agregar fuentes RSS](#cómo-agregar-fuentes-rss)
 - [Publicar directamente en LinkedIn](#publicar-directamente-en-linkedin)
-- [Fuentes RSS incluidas](#fuentes-rss-incluidas-104-fuentes)
+- [Fuentes RSS incluidas](#fuentes-rss-incluidas-118-fuentes-101-activas)
 - [Estructura del repositorio](#estructura-del-repositorio)
 - [Documentación adicional](#documentación-adicional)
 - [Capturas de pantalla](#capturas-de-pantalla)
+- [Desarrollo](#desarrollo)
 - [Licencia](#licencia)
 
 ---
@@ -58,7 +59,8 @@ CyberPulse es una herramienta productiva para profesionales de ciberseguridad qu
 
 ## Features
 
-- 📰 **Más de 100 fuentes RSS** activas por defecto.
+- 📰 **118 fuentes RSS incluidas**, 101 activas por defecto.
+- 🕰️ **Ventanas de lectura**: últimas 24h, 7 días, 30 días o todo. Los contadores de cada fuente siguen la ventana elegida, y las que no tienen nada para mostrar se repliegan.
 - 🔥 **Feed de noticias** con filtros por categoría, fuente, búsqueda y ordenamiento por fecha, severidad o *trending*.
 - ✍️ **Generador de posts** con 5 tonos, 6 formatos y soporte EN/ES.
 - 🚀 **Publicación directa en LinkedIn** desde el generador.
@@ -262,134 +264,125 @@ CyberPulse puede publicar posts generados directamente en tu feed personal de Li
 
 ---
 
-## Fuentes RSS incluidas (104 fuentes)
+## Fuentes RSS incluidas (118 fuentes, 101 activas)
 
-CyberPulse viene configurado con más de 100 fuentes de ciberseguridad. Algunas pueden fallar ocasionalmente por problemas de red, bloqueos o feeds desactualizados, pero las fuentes funcionales se mantienen activas.
+CyberPulse incluye 118 feeds de ciberseguridad, 101 habilitados por defecto. Esta lista se genera desde `app/server/seeds.ts` — ejecutá `npm run docs:sources` después de modificarlo.
 
 ### ALERT
 
-| Fuente | RSS URL |
-|--------|---------|
-| ASD ACSC Alerts | https://www.cyber.gov.au/rss/alerts |
-| CERT-EU | https://cert.europa.eu/publications/newsletter%20RSS |
+| Fuente | URL del RSS |
+|--------|-------------|
+| CERT-EU | https://cert.europa.eu/publications/security-advisories-rss |
 | CERT-FR | https://www.cert.ssi.gouv.fr/feed/ |
-| INCIBE | https://www.incibe.es/feed/alertas-tempranas |
+| INCIBE | https://www.incibe.es/incibe-cert/alerta-temprana/avisos/feed |
 | JPCERT/CC | https://www.jpcert.or.jp/english/rss/jpcert-en.rdf |
 | JPCERT/CC Blog | https://blogs.jpcert.or.jp/en/atom.xml |
 | UK NCSC All | https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml |
 | UK NCSC News | https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml |
 | UK NCSC Reports | https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml |
 
-### AWARENESS
-
-| Fuente | RSS URL |
-|--------|---------|
-| OSI | https://www.osi.es/feed/actualidad |
-
 ### COMPLIANCE
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Dark Reading | https://www.darkreading.com/rss.xml |
 
 ### DATA BREACH
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | The Record | https://therecord.media/feed/ |
 | Troy Hunt | https://www.troyhunt.com/rss/ |
 
 ### EXPLOIT
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Exploit-DB | https://www.exploit-db.com/rss.xml |
-| Packet Storm | https://rss.packetstormsecurity.com/files/ |
 | Sploitus | https://sploitus.com/rss |
 | ZDI Blog | https://www.zerodayinitiative.com/blog?format=rss |
 | ZDI Published | https://www.zerodayinitiative.com/rss/published/ |
 
 ### INDUSTRY
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Cybersecurity Dive | https://www.cybersecuritydive.com/feeds/news/ |
 | Infosecurity Magazine | http://www.infosecurity-magazine.com/rss/news/ |
-| Security Boulevard | https://securityboulevard.com/feed/ |
 
 ### IOT
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Attify Blog | https://blog.attify.com/rss/ |
 
 ### MALWARE
 
-| Fuente | RSS URL |
-|--------|---------|
-| Bitdefender | https://www.bitdefender.com/blog/hotforsecurity/feed/ |
+| Fuente | URL del RSS |
+|--------|-------------|
+| Bitdefender | https://www.bitdefender.com/blog/api/rss/hotforsecurity/ |
 | Elastic Security Labs | https://www.elastic.co/security-labs/rss/feed.xml |
 | Kaspersky Blog | https://www.kaspersky.com/blog/feed/ |
 | Malwarebytes Labs | https://blog.malwarebytes.com/feed/ |
 | Securelist | https://securelist.com/feed/ |
 | SecurityWeek | https://feeds.feedburner.com/securityweek |
-| SentinelOne | https://www.sentinelone.com/feed/ |
-| Sophos News | https://news.sophos.com/en-us/feed/ |
+| SentinelOne | https://www.sentinelone.com/blog/feed/ |
+| Sophos News | https://feeds.feedburner.com/sophos/dgdY |
 | WeLiveSecurity | https://www.welivesecurity.com/en/rss/feed/ |
 
 ### PHISHING
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Krebs on Security | https://krebsonsecurity.com/feed/ |
 
 ### POLICY
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | CyberScoop | https://cyberscoop.com/feed |
-| ENISA | https://www.enisa.europa.eu/rss/publications |
-| NSA Cybersecurity | https://www.nsa.gov/Press-Room/Press-Releases-Statements/feed/ |
 
 ### RESEARCH
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Ars Technica Security | https://arstechnica.com/security/feed/ |
+| Fuzzing Labs | https://webassembly-security.com/feed/ |
+| Google Bug Hunters | https://bughunters.google.com/feed/en |
 | Google Online Security | https://feeds.feedburner.com/GoogleOnlineSecurityBlog |
 | Google Project Zero | https://googleprojectzero.blogspot.com/feeds/posts/default?alt=rss |
-| Google TAG | https://blog.google/threat-analysis-group/rss/ |
 | InfoSec Write-ups | https://infosecwriteups.com/feed |
+| MaskRay | https://maskray.me/blog/atom.xml |
+| NVISO Labs | https://blog.nviso.eu/feed/ |
+| paper - Last paper | https://paper.seebug.org/rss/ |
+| S3cur3Th1sSh1t | https://s3cur3th1ssh1t.github.io/feed.xml |
 | STAR Labs | https://starlabs.sg/publications/index.xml |
 | Tencent Xuanwu Lab | https://xlab.tencent.com/cn/feed/ |
 | Trail of Bits | https://blog.trailofbits.com/feed/ |
-| paper - Last paper | https://paper.seebug.org/rss/ |
-| tttang | https://www.tttang.com/rss.xml |
+| XPN InfoSec Blog | https://blog.xpnsec.com/rss/ |
 
 ### TECH
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Hacker News Frontpage | https://hnrss.org/frontpage |
+| Kali Linux | https://www.kali.org/rss.xml |
 
 ### THREAT INTEL
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | 4hou | https://www.4hou.com/feed |
 | Anquanke | https://api.anquanke.com/data/v1/rss |
 | Check Point Blog | https://blog.checkpoint.com/feed/ |
 | Check Point Research | https://research.checkpoint.com/feed/ |
 | Cisco Talos | https://feeds.feedburner.com/feedburner/Talos |
 | CrowdStrike Blog | https://www.crowdstrike.com/blog/feed/ |
-| Cyber Kendra | https://www.cyberkendra.com/feeds/posts/default |
-| CyberNews | https://cybernews.com/feed/ |
 | Cybersecurity News | https://securityonline.info/feed/ |
 | Darknet | http://feeds.feedburner.com/darknethackers |
-| FBI Cyber | https://www.fbi.gov/news/feed |
+| GuidePoint Security | https://www.guidepointsecurity.com/feed/ |
 | HackerNews.cc | http://hackernews.cc/feed |
 | Intelligence Online | https://feeds.feedburner.com/IntelligenceOnline |
-| Mandiant | https://www.mandiant.com/resources/blog/rss.xml |
 | Palo Alto Networks | https://www.paloaltonetworks.com/blog/feed |
 | Proofpoint Threat Insight | https://www.proofpoint.com/us/threat-insight-blog.xml |
 | RedPacket Security | https://www.redpacketsecurity.com/feed/ |
@@ -399,30 +392,29 @@ CyberPulse viene configurado con más de 100 fuentes de ciberseguridad. Algunas 
 | Schneier on Security | https://www.schneier.com/feed/atom/ |
 | The DFIR Report | https://thedfirreport.com/feed/ |
 | The Hacker News | https://feeds.feedburner.com/TheHackersNews |
+| ThreatCluster | https://threatcluster.io/feed.xml |
 | Threatpost | https://threatpost.com/feed/ |
 
 ### VULNERABILITY
 
-| Fuente | RSS URL |
-|--------|---------|
+| Fuente | URL del RSS |
+|--------|-------------|
 | Apple Developer Releases | https://developer.apple.com/news/releases/rss/releases.rss |
 | Apple Newsroom | https://www.apple.com/newsroom/rss-feed.rss |
-| Appsecco | https://blog.appsecco.com/feed |
 | BleepingComputer | https://www.bleepingcomputer.com/feed/ |
 | Bugtraq | http://seclists.org/rss/bugtraq.rss |
-| CCN-CERT | https://www.ccn-cert.cni.es/feed/avisos |
 | CERT Vulnerability Notes | http://www.kb.cert.org/vulfeed |
 | CISA Advisories | https://www.cisa.gov/cybersecurity-advisories/all.xml |
 | CISA ICS Advisories | https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml |
 | CISA ICS Medical Advisories | https://www.cisa.gov/cybersecurity-advisories/ics-medical-advisories.xml |
+| Cisco Security Blog | https://blogs.cisco.com/security/feed |
 | CVEfeed.io | https://cvefeed.io/rssfeed/latest.xml |
 | CXSecurity | https://cxsecurity.com/wlb/rss/all/ |
-| Cisco Security Blog | https://blogs.cisco.com/security/feed |
 | Der Flounder | https://derflounder.wordpress.com/feed/ |
 | FortiGuard PSIRT | https://www.fortiguard.com/rss/ir.xml |
-| Fortinet Blog | https://www.fortinet.com/blog/feed |
 | HackerOne Hacktivity | https://rss.ricterz.me/hacktivity |
 | Intigriti | https://blog.intigriti.com/feed/ |
+| Joseph Thacker | https://rez0.blog/feed.xml |
 | Microsoft Security | https://www.microsoft.com/en-us/security/blog/feed/ |
 | Microsoft Security Update Guide | https://api.msrc.microsoft.com/update-guide/rss |
 | NSFocus | http://blog.nsfocus.net/feed/ |
@@ -435,10 +427,56 @@ CyberPulse viene configurado con más de 100 fuentes de ciberseguridad. Algunas 
 | Rapid7 Emergent Threats | https://blog.rapid7.com/tag/emergent-threat-response/rss/ |
 | RedesZone | https://www.redeszone.net/feed/ |
 | Seebug | https://www.seebug.org/rss/new/ |
+| Shubham Shah | https://shubs.io/rss/ |
+| Telekom Security | https://github.security.telekom.com/atom.xml |
 | Tenable Blog | https://www.tenable.com/blog/feed |
 | Trickest CVE | https://github.com/trickest/cve/commits/main.atom |
-| VulDB | https://vuldb.com/en/?rss.recent |
 | Vulners | https://vulners.com/rss.xml |
+| Wallarm Lab | https://lab.wallarm.com/feed/ |
+
+### Retiradas (17)
+
+Verificadas como inalcanzables, por eso se incluyen deshabilitadas en lugar de costar una petición en cada scrape. Siguen visibles en Settings y se pueden reactivar cuando quieras.
+
+| Fuente | Motivo |
+|--------|--------|
+| Appsecco | serves HTML, feed removed |
+| ASD ACSC Alerts | connection refused |
+| CCN-CERT | HTTP 403 (bot protection) |
+| Cyber Kendra | HTTP 403 (bot protection) |
+| CyberNews | HTTP 403 (bot protection) |
+| ENISA | HTTP 404, no replacement found |
+| FBI Cyber | HTTP 403 (bot protection) |
+| Fortinet Blog | HTTP 404, no replacement found |
+| Google TAG | HTTP 404, folded into blog.google |
+| Mandiant | redirects to HTML on cloud.google.com |
+| NSA Cybersecurity | HTTP 403 (bot protection) |
+| OSI | WAF rejects the request |
+| Packet Storm | TLS cert does not match hostname |
+| Security Boulevard | HTTP 403 (bot protection) |
+| tttang | connection refused |
+| VulDB | HTTP 403 (bot protection) |
+| Yassine Aboukir | malformed XML entity |
+
+## Desarrollo
+
+```bash
+cd app
+npm install
+npm run dev          # Vite en :3000 + API en :3001
+npm test             # 37 tests unitarios (vitest)
+npm run build        # typecheck + bundle de producción
+npm run lint
+npm run docs:sources # regenera las tablas de fuentes de ambos READMEs desde seeds.ts
+```
+
+Los tests cubren el manejo de fechas del scraper, el filtrado por ventana
+temporal y los helpers de seguridad (escapado de HTML, verificación de
+same-origin, allowlist de hosts de IA). El CI corre el build, los tests y
+`npm audit --omit=dev` en cada push y pull request.
+
+Después de editar `app/server/seeds.ts`, ejecutá `npm run docs:sources` para
+que las tablas de este archivo sigan reflejando lo que realmente se publica.
 
 ---
 

@@ -30,10 +30,11 @@
 - [Running without Docker](#running-without-docker)
 - [How to add RSS sources](#how-to-add-rss-sources)
 - [Post directly to LinkedIn](#post-directly-to-linkedin)
-- [Built-in RSS sources](#built-in-rss-sources-104-sources)
+- [Built-in RSS sources](#built-in-rss-sources-118-sources-101-active)
 - [Repository structure](#repository-structure)
 - [Additional documentation](#additional-documentation)
 - [Screenshots](#screenshots)
+- [Development](#development)
 - [License](#license)
 
 ---
@@ -58,8 +59,9 @@ CyberPulse is a productivity tool for cybersecurity professionals who need to st
 
 ## Features
 
-- 📰 **100+ built-in RSS feeds**.
+- 📰 **118 built-in RSS feeds**, 101 enabled by default.
 - 🔥 **News feed** with filters by category, source, search, and sorting by date, severity or *trending*.
+- 🕰️ **Reading windows**: last 24h, 7 days, 30 days, or everything. Source counts follow the window, and sources with nothing to show collapse out of the way.
 - ✍️ **Post generator** with 5 tones, 6 formats, and EN/ES support.
 - 🚀 **Post directly to LinkedIn** from the generator.
 - 🕐 **History / saved posts** to keep your generated content.
@@ -262,29 +264,22 @@ CyberPulse can publish generated posts straight to your personal LinkedIn feed. 
 
 ---
 
-## Built-in RSS sources (104 sources)
+## Built-in RSS sources (118 sources, 101 active)
 
-CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasionally fail due to network issues, blocks, or outdated feeds, but working sources stay active.
+CyberPulse ships with 118 cybersecurity feeds, 101 of them enabled by default. This list is generated from `app/server/seeds.ts` — run `npm run docs:sources` after changing it.
 
 ### ALERT
 
 | Source | RSS URL |
 |--------|---------|
-| ASD ACSC Alerts | https://www.cyber.gov.au/rss/alerts |
-| CERT-EU | https://cert.europa.eu/publications/newsletter%20RSS |
+| CERT-EU | https://cert.europa.eu/publications/security-advisories-rss |
 | CERT-FR | https://www.cert.ssi.gouv.fr/feed/ |
-| INCIBE | https://www.incibe.es/feed/alertas-tempranas |
+| INCIBE | https://www.incibe.es/incibe-cert/alerta-temprana/avisos/feed |
 | JPCERT/CC | https://www.jpcert.or.jp/english/rss/jpcert-en.rdf |
 | JPCERT/CC Blog | https://blogs.jpcert.or.jp/en/atom.xml |
 | UK NCSC All | https://www.ncsc.gov.uk/api/1/services/v1/all-rss-feed.xml |
 | UK NCSC News | https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml |
 | UK NCSC Reports | https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml |
-
-### AWARENESS
-
-| Source | RSS URL |
-|--------|---------|
-| OSI | https://www.osi.es/feed/actualidad |
 
 ### COMPLIANCE
 
@@ -304,7 +299,6 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 | Source | RSS URL |
 |--------|---------|
 | Exploit-DB | https://www.exploit-db.com/rss.xml |
-| Packet Storm | https://rss.packetstormsecurity.com/files/ |
 | Sploitus | https://sploitus.com/rss |
 | ZDI Blog | https://www.zerodayinitiative.com/blog?format=rss |
 | ZDI Published | https://www.zerodayinitiative.com/rss/published/ |
@@ -315,7 +309,6 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 |--------|---------|
 | Cybersecurity Dive | https://www.cybersecuritydive.com/feeds/news/ |
 | Infosecurity Magazine | http://www.infosecurity-magazine.com/rss/news/ |
-| Security Boulevard | https://securityboulevard.com/feed/ |
 
 ### IOT
 
@@ -327,14 +320,14 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 
 | Source | RSS URL |
 |--------|---------|
-| Bitdefender | https://www.bitdefender.com/blog/hotforsecurity/feed/ |
+| Bitdefender | https://www.bitdefender.com/blog/api/rss/hotforsecurity/ |
 | Elastic Security Labs | https://www.elastic.co/security-labs/rss/feed.xml |
 | Kaspersky Blog | https://www.kaspersky.com/blog/feed/ |
 | Malwarebytes Labs | https://blog.malwarebytes.com/feed/ |
 | Securelist | https://securelist.com/feed/ |
 | SecurityWeek | https://feeds.feedburner.com/securityweek |
-| SentinelOne | https://www.sentinelone.com/feed/ |
-| Sophos News | https://news.sophos.com/en-us/feed/ |
+| SentinelOne | https://www.sentinelone.com/blog/feed/ |
+| Sophos News | https://feeds.feedburner.com/sophos/dgdY |
 | WeLiveSecurity | https://www.welivesecurity.com/en/rss/feed/ |
 
 ### PHISHING
@@ -348,29 +341,32 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 | Source | RSS URL |
 |--------|---------|
 | CyberScoop | https://cyberscoop.com/feed |
-| ENISA | https://www.enisa.europa.eu/rss/publications |
-| NSA Cybersecurity | https://www.nsa.gov/Press-Room/Press-Releases-Statements/feed/ |
 
 ### RESEARCH
 
 | Source | RSS URL |
 |--------|---------|
 | Ars Technica Security | https://arstechnica.com/security/feed/ |
+| Fuzzing Labs | https://webassembly-security.com/feed/ |
+| Google Bug Hunters | https://bughunters.google.com/feed/en |
 | Google Online Security | https://feeds.feedburner.com/GoogleOnlineSecurityBlog |
 | Google Project Zero | https://googleprojectzero.blogspot.com/feeds/posts/default?alt=rss |
-| Google TAG | https://blog.google/threat-analysis-group/rss/ |
 | InfoSec Write-ups | https://infosecwriteups.com/feed |
+| MaskRay | https://maskray.me/blog/atom.xml |
+| NVISO Labs | https://blog.nviso.eu/feed/ |
+| paper - Last paper | https://paper.seebug.org/rss/ |
+| S3cur3Th1sSh1t | https://s3cur3th1ssh1t.github.io/feed.xml |
 | STAR Labs | https://starlabs.sg/publications/index.xml |
 | Tencent Xuanwu Lab | https://xlab.tencent.com/cn/feed/ |
 | Trail of Bits | https://blog.trailofbits.com/feed/ |
-| paper - Last paper | https://paper.seebug.org/rss/ |
-| tttang | https://www.tttang.com/rss.xml |
+| XPN InfoSec Blog | https://blog.xpnsec.com/rss/ |
 
 ### TECH
 
 | Source | RSS URL |
 |--------|---------|
 | Hacker News Frontpage | https://hnrss.org/frontpage |
+| Kali Linux | https://www.kali.org/rss.xml |
 
 ### THREAT INTEL
 
@@ -382,14 +378,11 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 | Check Point Research | https://research.checkpoint.com/feed/ |
 | Cisco Talos | https://feeds.feedburner.com/feedburner/Talos |
 | CrowdStrike Blog | https://www.crowdstrike.com/blog/feed/ |
-| Cyber Kendra | https://www.cyberkendra.com/feeds/posts/default |
-| CyberNews | https://cybernews.com/feed/ |
 | Cybersecurity News | https://securityonline.info/feed/ |
 | Darknet | http://feeds.feedburner.com/darknethackers |
-| FBI Cyber | https://www.fbi.gov/news/feed |
+| GuidePoint Security | https://www.guidepointsecurity.com/feed/ |
 | HackerNews.cc | http://hackernews.cc/feed |
 | Intelligence Online | https://feeds.feedburner.com/IntelligenceOnline |
-| Mandiant | https://www.mandiant.com/resources/blog/rss.xml |
 | Palo Alto Networks | https://www.paloaltonetworks.com/blog/feed |
 | Proofpoint Threat Insight | https://www.proofpoint.com/us/threat-insight-blog.xml |
 | RedPacket Security | https://www.redpacketsecurity.com/feed/ |
@@ -399,6 +392,7 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 | Schneier on Security | https://www.schneier.com/feed/atom/ |
 | The DFIR Report | https://thedfirreport.com/feed/ |
 | The Hacker News | https://feeds.feedburner.com/TheHackersNews |
+| ThreatCluster | https://threatcluster.io/feed.xml |
 | Threatpost | https://threatpost.com/feed/ |
 
 ### VULNERABILITY
@@ -407,22 +401,20 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 |--------|---------|
 | Apple Developer Releases | https://developer.apple.com/news/releases/rss/releases.rss |
 | Apple Newsroom | https://www.apple.com/newsroom/rss-feed.rss |
-| Appsecco | https://blog.appsecco.com/feed |
 | BleepingComputer | https://www.bleepingcomputer.com/feed/ |
 | Bugtraq | http://seclists.org/rss/bugtraq.rss |
-| CCN-CERT | https://www.ccn-cert.cni.es/feed/avisos |
 | CERT Vulnerability Notes | http://www.kb.cert.org/vulfeed |
 | CISA Advisories | https://www.cisa.gov/cybersecurity-advisories/all.xml |
 | CISA ICS Advisories | https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml |
 | CISA ICS Medical Advisories | https://www.cisa.gov/cybersecurity-advisories/ics-medical-advisories.xml |
+| Cisco Security Blog | https://blogs.cisco.com/security/feed |
 | CVEfeed.io | https://cvefeed.io/rssfeed/latest.xml |
 | CXSecurity | https://cxsecurity.com/wlb/rss/all/ |
-| Cisco Security Blog | https://blogs.cisco.com/security/feed |
 | Der Flounder | https://derflounder.wordpress.com/feed/ |
 | FortiGuard PSIRT | https://www.fortiguard.com/rss/ir.xml |
-| Fortinet Blog | https://www.fortinet.com/blog/feed |
 | HackerOne Hacktivity | https://rss.ricterz.me/hacktivity |
 | Intigriti | https://blog.intigriti.com/feed/ |
+| Joseph Thacker | https://rez0.blog/feed.xml |
 | Microsoft Security | https://www.microsoft.com/en-us/security/blog/feed/ |
 | Microsoft Security Update Guide | https://api.msrc.microsoft.com/update-guide/rss |
 | NSFocus | http://blog.nsfocus.net/feed/ |
@@ -435,10 +427,56 @@ CyberPulse ships pre-configured with 100+ cybersecurity sources. Some may occasi
 | Rapid7 Emergent Threats | https://blog.rapid7.com/tag/emergent-threat-response/rss/ |
 | RedesZone | https://www.redeszone.net/feed/ |
 | Seebug | https://www.seebug.org/rss/new/ |
+| Shubham Shah | https://shubs.io/rss/ |
+| Telekom Security | https://github.security.telekom.com/atom.xml |
 | Tenable Blog | https://www.tenable.com/blog/feed |
 | Trickest CVE | https://github.com/trickest/cve/commits/main.atom |
-| VulDB | https://vuldb.com/en/?rss.recent |
 | Vulners | https://vulners.com/rss.xml |
+| Wallarm Lab | https://lab.wallarm.com/feed/ |
+
+### Retired (17)
+
+Verified unreachable, so they ship disabled rather than costing a request on every scrape. They stay listed in Settings and can be re-enabled at any time.
+
+| Source | Reason |
+|--------|--------|
+| Appsecco | serves HTML, feed removed |
+| ASD ACSC Alerts | connection refused |
+| CCN-CERT | HTTP 403 (bot protection) |
+| Cyber Kendra | HTTP 403 (bot protection) |
+| CyberNews | HTTP 403 (bot protection) |
+| ENISA | HTTP 404, no replacement found |
+| FBI Cyber | HTTP 403 (bot protection) |
+| Fortinet Blog | HTTP 404, no replacement found |
+| Google TAG | HTTP 404, folded into blog.google |
+| Mandiant | redirects to HTML on cloud.google.com |
+| NSA Cybersecurity | HTTP 403 (bot protection) |
+| OSI | WAF rejects the request |
+| Packet Storm | TLS cert does not match hostname |
+| Security Boulevard | HTTP 403 (bot protection) |
+| tttang | connection refused |
+| VulDB | HTTP 403 (bot protection) |
+| Yassine Aboukir | malformed XML entity |
+
+## Development
+
+```bash
+cd app
+npm install
+npm run dev          # Vite on :3000 + API on :3001
+npm test             # 37 unit tests (vitest)
+npm run build        # typecheck + production bundle
+npm run lint
+npm run docs:sources # regenerate the source tables in both READMEs from seeds.ts
+```
+
+The tests cover the scraper's date handling, the feed-window filtering, and
+the security helpers (HTML escaping, the same-origin check, the AI host
+allowlist). CI runs the build, the tests and `npm audit --omit=dev` on every
+push and pull request.
+
+After editing `app/server/seeds.ts`, run `npm run docs:sources` so the tables
+in this file stay in step with what actually ships.
 
 ---
 
@@ -491,7 +529,11 @@ A few captures of CyberPulse in action. Click any image to view it full size.
 | `LINKEDIN_CLIENT_ID` | `null` | LinkedIn Developer App Client ID (optional — can also be set in the GUI) |
 | `LINKEDIN_CLIENT_SECRET` | `null` | LinkedIn Developer App Client Secret (optional — can also be set in the GUI) |
 | `LINKEDIN_REDIRECT_URI` | `http://localhost:3001/api/linkedin/callback` | LinkedIn OAuth redirect URI |
-| `SCRAPE_CRON` | `*/15 * * * *` | RSS scraping interval |
+| `SCRAPE_CRON` | `*/15 * * * *` | RSS scraping interval (cron syntax) |
+| `CYBERPULSE_SCRAPE_CONCURRENCY` | `8` | Feeds fetched in parallel. A full scrape of 100+ feeds takes ~20 s |
+| `CYBERPULSE_CORS_ORIGINS` | same-origin only | Comma-separated extra browser origins allowed to call the API. `*` disables the check — only sensible behind your own auth |
+| `CYBERPULSE_AI_HOSTS` | *(see below)* | Comma-separated extra hosts the AI proxy may call. Defaults cover OpenAI, Groq, Anthropic, Mistral, Together, DeepSeek, OpenRouter and Google |
+| `CYBERPULSE_MAX_NEWS` | `20000` | Hard ceiling on `limit` for `GET /api/news` |
 | `NODE_ENV` | `production` | Node environment |
 
 ---

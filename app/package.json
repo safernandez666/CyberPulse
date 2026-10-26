@@ -11,7 +11,8 @@
     "server": "npx tsx server/index.ts",
     "server:dev": "npx tsx watch server/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docs:sources": "node scripts/gen-sources-doc.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
