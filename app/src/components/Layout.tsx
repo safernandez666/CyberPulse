@@ -15,6 +15,7 @@ import { Menu } from 'lucide-react';
 import SettingsPanel from './SettingsPanel';
 import { useRSSFeeds } from '@/hooks/useRSSFeeds';
 import { countArticlesBySource, type TimeRange } from '@/lib/timeRange';
+import { createSource, deleteSource } from '@/services/apiService';
 
 function TabLoading() {
   return (
@@ -67,6 +68,16 @@ export default function Layout() {
       prev.map((s) => ({ ...s, active }))
     );
   }, []);
+
+  const handleAddSource = useCallback(async (name: string, rssUrl: string, category: string) => {
+    await createSource({ name, rssUrl, category });
+    await reloadSources();
+  }, [reloadSources]);
+
+  const handleDeleteSource = useCallback(async (id: string) => {
+    await deleteSource(id);
+    await reloadSources();
+  }, [reloadSources]);
 
   const effectiveSources = localSources.length > 0 ? localSources : sources;
 
@@ -156,6 +167,8 @@ export default function Layout() {
           onToggleSource={handleToggleSource}
           onToggleAll={handleToggleAllSources}
           onClose={() => setSidebarOpen(false)}
+          onAddSource={handleAddSource}
+          onDeleteSource={handleDeleteSource}
         />
       </aside>
 
