@@ -8,7 +8,7 @@ out
 .vite
 
 # Data & secrets
-data
+/data
 .env
 .env.*
 !.env.example
