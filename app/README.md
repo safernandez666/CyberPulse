@@ -441,7 +441,31 @@ docker compose logs -f | grep CRON
 
 ## Agregar una nueva fuente RSS
 
-Para agregar una nueva fuente RSS, edita `server/seeds.ts`:
+### Desde la interfaz (Recomendado)
+
+Podes agregar fuentes RSS personalizadas directamente desde la UI sin tocar código:
+
+1. Abre CyberPulse en tu navegador
+2. En el **sidebar izquierdo**, busca la sección **SOURCES**
+3. Click en el botón **"+ ADD"** (al lado de "Enable all / Disable all")
+4. Completa el formulario:
+   - **Source Name**: Nombre descriptivo (ej: "Mi Blog de Seguridad")
+   - **RSS Feed URL**: URL del feed RSS (ej: `https://ejemplo.com/feed.xml`)
+   - **Category**: Selecciona la categoría apropiada
+5. Click en **"Add Source"**
+
+La nueva fuente se agrega inmediatamente y comienza a scrapear en el próximo ciclo (cada 15 min).
+
+**Para eliminar una fuente personalizada:**
+- Pasa el mouse sobre la fuente en el sidebar
+- Click en el ícono de **papelera (🗑️)** a la derecha
+- Confirma la eliminación
+
+> **Nota:** Solo podes eliminar fuentes que creaste. Las fuentes predeterminadas no se pueden eliminar.
+
+### Desde código (Avanzado)
+
+Para agregar fuentes RSS predeterminadas que se incluyan en el sistema, edita `server/seeds.ts`:
 
 ```typescript
 // Abre server/seeds.ts
@@ -476,7 +500,9 @@ export const RSS_SOURCES: RSSSource[] = [
 | `ALERT` | Alertas de seguridad |
 | `AWARENESS` | Concientizacion |
 
-### Reconstruir despues de cambios
+### Reconstruir despues de cambios (solo para fuentes desde código)
+
+> **Importante:** Si agregaste la fuente desde la UI, **no necesitas** reconstruir nada. Este paso solo aplica si editaste `server/seeds.ts` manualmente.
 
 Como el frontend se buildea dentro de la imagen Docker, cualquier modificacion en `src/` o `server/` requiere reconstruir:
 
