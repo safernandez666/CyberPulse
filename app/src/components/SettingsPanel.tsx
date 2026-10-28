@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings as SettingsIcon, Save, KeyRound, Bot, Link, Trash2, Plus, Rss, Shield, Linkedin, Unlink, CheckCircle2 } from 'lucide-react';
+import { Settings as SettingsIcon, Save, KeyRound, Bot, Link, Trash2, Plus, Rss, Shield, Linkedin, Unlink, CheckCircle2, Server } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import {
   getLinkedInConfig, saveLinkedInConfig, deleteLinkedInConfig,
   getLinkedInStatus, getLinkedInAuthUrl, disconnectLinkedIn,
   type LinkedInStatus,
+  fetchTechStack, createTechStackItem, deleteTechStackItem, type TechStackItem,
 } from '@/services/apiService';
 
 export interface SettingsPanelProps {
@@ -40,6 +41,11 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
   const [linkedinForm, setLinkedinForm] = useState({ clientId: '', clientSecret: '', redirectUri: 'http://localhost:3001/api/linkedin/callback' });
   const [linkedinLoading, setLinkedinLoading] = useState(false);
 
+  const [techStack, setTechStack] = useState<TechStackItem[]>([]);
+  const [loadingTechStack, setLoadingTechStack] = useState(false);
+  const [newTech, setNewTech] = useState({ technology: '', version: '', vendor: '', category: '' });
+  const [addingTech, setAddingTech] = useState(false);
+
   useEffect(() => {
     if (open) {
       setSettings(getSettings());
@@ -47,6 +53,7 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
       setToast(null);
       loadSources();
       loadLinkedIn();
+      loadTechStack();
     }
   }, [open]);
 
@@ -199,6 +206,52 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
     }
   };
 
+  const loadTechStack = useCallback(async () => {
+    setLoadingTechStack(true);
+    try {
+      const data = await fetchTechStack();
+      setTechStack(data);
+    } catch (err) {
+      console.error('[Settings] Failed to load tech stack:', err);
+      showToast('Failed to load tech stack', 'error');
+    } finally {
+      setLoadingTechStack(false);
+    }
+  }, [showToast]);
+
+  const handleAddTech = async () => {
+    if (!newTech.technology.trim()) {
+      showToast('Technology name is required', 'error');
+      return;
+    }
+    setAddingTech(true);
+    try {
+      await createTechStackItem({
+        technology: newTech.technology.trim(),
+        version: newTech.version.trim() || undefined,
+        vendor: newTech.vendor.trim() || undefined,
+        category: newTech.category.trim() || undefined,
+      });
+      setNewTech({ technology: '', version: '', vendor: '', category: '' });
+      showToast('Technology added successfully', 'success');
+      await loadTechStack();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to add technology', 'error');
+    } finally {
+      setAddingTech(false);
+    }
+  };
+
+  const handleDeleteTech = async (id: number) => {
+    try {
+      await deleteTechStackItem(id);
+      showToast('Technology removed', 'success');
+      await loadTechStack();
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to remove technology', 'error');
+    }
+  };
+
   const customSources = sources.filter((s) => s.custom);
 
   return (
@@ -317,6 +370,123 @@ export default function SettingsPanel({ className, onSourcesChanged }: SettingsP
                   onChange={(e) => update('cyberpulseApiKey', e.target.value)}
                   className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-bg-card border-border-default shadow-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-text-primary font-inter text-base flex items-center gap-2">
+                <Server size={18} className="text-accent" />
+                My Technology Stack
+              </CardTitle>
+              <CardDescription className="text-text-tertiary font-inter text-xs">
+                Configure your infrastructure to receive personalized security news. Examples: PHP 7.4, Apache 2.4, Fortinet FortiOS 7.0
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Technology</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. PHP, Apache, Fortinet"
+                      value={newTech.technology}
+                      onChange={(e) => setNewTech((prev) => ({ ...prev, technology: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                  <div className="space-y-2 col-span-2 sm:col-span-1">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Version (Optional)</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. 7.4, 2.4.x, 7.0"
+                      value={newTech.version}
+                      onChange={(e) => setNewTech((prev) => ({ ...prev, version: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-2">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Vendor (Optional)</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Fortinet, Cisco"
+                      value={newTech.vendor}
+                      onChange={(e) => setNewTech((prev) => ({ ...prev, vendor: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em]">Category (Optional)</Label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. Firewall, CMS"
+                      value={newTech.category}
+                      onChange={(e) => setNewTech((prev) => ({ ...prev, category: e.target.value }))}
+                      className="bg-bg-input border-border-default text-text-primary placeholder:text-text-tertiary font-inter text-sm rounded-input h-10 focus:border-accent focus:ring-accent-glow"
+                    />
+                  </div>
+                </div>
+                <Button
+                  onClick={handleAddTech}
+                  disabled={addingTech}
+                  className="w-full bg-accent text-text-inverse hover:brightness-110 font-inter text-sm font-semibold rounded-button h-10"
+                >
+                  {addingTech ? (
+                    'Adding...'
+                  ) : (
+                    <>
+                      <Plus size={16} />
+                      Add Technology
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div className="border-t border-border-default pt-3">
+                <p className="text-text-secondary text-xs font-jetbrains uppercase tracking-[0.08em] mb-2">
+                  Your tech stack
+                </p>
+                {loadingTechStack ? (
+                  <p className="text-text-tertiary text-sm font-inter">Loading...</p>
+                ) : techStack.length === 0 ? (
+                  <p className="text-text-tertiary text-sm font-inter">No technologies configured yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {techStack.map((tech) => (
+                      <div
+                        key={tech.id}
+                        className="flex items-center justify-between gap-2 p-2 rounded-md bg-bg-elevated border border-border-default"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-text-primary text-sm font-inter truncate">
+                            {tech.technology}
+                            {tech.version && <span className="text-accent ml-2">v{tech.version}</span>}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {tech.vendor && (
+                              <span className="text-text-tertiary text-xs font-jetbrains">{tech.vendor}</span>
+                            )}
+                            {tech.category && (
+                              <span className="text-text-tertiary text-xs font-jetbrains uppercase">• {tech.category}</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTech(tech.id)}
+                          className="p-1.5 rounded-md text-text-tertiary hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
+                          aria-label={`Delete ${tech.technology}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

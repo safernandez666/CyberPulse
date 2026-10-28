@@ -291,3 +291,85 @@ export async function publishToLinkedIn(text: string, visibility: 'PUBLIC' | 'CO
   }
   return { success: true, postUrn: data.postUrn || '' };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Tech Stack                                                         */
+/* ------------------------------------------------------------------ */
+
+export interface TechStackItem {
+  id: number;
+  technology: string;
+  version?: string;
+  vendor?: string;
+  category?: string;
+  createdAt?: string;
+}
+
+export interface TechStackResponse {
+  stack: TechStackItem[];
+}
+
+export interface TechStackNewsArticle extends NewsArticle {
+  matchScore: number;
+  matchedTechnologies: string[];
+}
+
+export interface TechStackNewsResponse {
+  news: TechStackNewsArticle[];
+  statistics: {
+    totalArticles: number;
+    matchedArticles: number;
+    byTechnology: Record<string, number>;
+    bySeverity: Record<string, number>;
+  };
+}
+
+export async function fetchTechStack(): Promise<TechStackItem[]> {
+  const res = await fetch('/api/tech-stack');
+  if (!res.ok) throw new Error(`Tech stack API error: ${res.status}`);
+  const data: TechStackResponse = await res.json();
+  return data.stack || [];
+}
+
+export interface CreateTechStackParams {
+  technology: string;
+  version?: string;
+  vendor?: string;
+  category?: string;
+}
+
+export async function createTechStackItem(item: CreateTechStackParams): Promise<TechStackItem> {
+  const res = await fetch('/api/tech-stack', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...cyberpulseHeaders(),
+    },
+    body: JSON.stringify(item),
+  });
+  const data = (await res.json().catch(() => ({}))) as { item?: TechStackItem; error?: string };
+  if (!res.ok) {
+    throw new Error(data.error || `Create tech stack item failed (${res.status})`);
+  }
+  if (!data.item) {
+    throw new Error('Invalid create tech stack response');
+  }
+  return data.item;
+}
+
+export async function deleteTechStackItem(id: number): Promise<void> {
+  const res = await fetch(`/api/tech-stack/${id}`, {
+    method: 'DELETE',
+    headers: cyberpulseHeaders(),
+  });
+  const data = (await res.json().catch(() => ({}))) as { success?: boolean; error?: string };
+  if (!res.ok || !data.success) {
+    throw new Error(data.error || `Delete tech stack item failed (${res.status})`);
+  }
+}
+
+export async function fetchTechStackNews(): Promise<TechStackNewsResponse> {
+  const res = await fetch('/api/tech-stack/news');
+  if (!res.ok) throw new Error(`Tech stack news API error: ${res.status}`);
+  return res.json();
+}

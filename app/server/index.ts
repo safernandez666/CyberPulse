@@ -11,6 +11,7 @@ import { seedSources } from './seeds';
 import { scrapeAll, cleanOldArticles, timeAgo, publishDate } from './scraper';
 import { generatePost, generateDailyDigest } from './postGenerator';
 import type { GeneratePostRequest } from './postGenerator';
+import { matchArticlesToStack, getStackStatistics, type TechStackItem } from './techMatcher';
 import {
   hasLinkedInConfig,
   getLinkedInConfig,
@@ -412,6 +413,132 @@ app.patch('/api/sources/:id', writeLimiter, checkApiKey, (req, res) => {
         custom: Boolean(row.custom),
       },
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/*  Tech Stack                                                         */
+/* ------------------------------------------------------------------ */
+
+app.get('/api/tech-stack', (req, res) => {
+  try {
+    const db = getDb();
+    const rows = db.prepare(`SELECT * FROM user_tech_stack ORDER BY technology, version`).all() as any[];
+    const stack = rows.map((row: any) => ({
+      id: row.id,
+      technology: row.technology,
+      version: row.version || undefined,
+      vendor: row.vendor || undefined,
+      category: row.category || undefined,
+      createdAt: row.created_at,
+    }));
+    res.json({ stack });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tech-stack', writeLimiter, checkApiKey, (req, res) => {
+  try {
+    const { technology, version, vendor, category } = req.body;
+    if (typeof technology !== 'string' || technology.trim() === '') {
+      return res.status(400).json({ error: 'technology is required' });
+    }
+
+    const db = getDb();
+    const result = db.prepare(
+      `INSERT INTO user_tech_stack (technology, version, vendor, category) VALUES (?, ?, ?, ?)`
+    ).run(
+      technology.trim(),
+      version ? version.trim() : null,
+      vendor ? vendor.trim() : null,
+      category ? category.trim() : null
+    );
+
+    const row = db.prepare(`SELECT * FROM user_tech_stack WHERE id = ?`).get(result.lastInsertRowid) as any;
+    res.status(201).json({
+      item: {
+        id: row.id,
+        technology: row.technology,
+        version: row.version || undefined,
+        vendor: row.vendor || undefined,
+        category: row.category || undefined,
+        createdAt: row.created_at,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tech-stack/:id', writeLimiter, checkApiKey, (req, res) => {
+  try {
+    const db = getDb();
+    const result = db.prepare(`DELETE FROM user_tech_stack WHERE id = ?`).run(req.params.id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Tech stack item not found' });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/tech-stack/news', readLimiter, (req, res) => {
+  try {
+    const db = getDb();
+    
+    // Get user's tech stack
+    const stackRows = db.prepare(`SELECT * FROM user_tech_stack ORDER BY technology`).all() as any[];
+    const techStack: TechStackItem[] = stackRows.map((row: any) => ({
+      id: row.id,
+      technology: row.technology,
+      version: row.version || undefined,
+      vendor: row.vendor || undefined,
+      category: row.category || undefined,
+    }));
+
+    if (techStack.length === 0) {
+      return res.json({ news: [], statistics: { totalArticles: 0, matchedArticles: 0, byTechnology: {}, bySeverity: {} } });
+    }
+
+    // Get all articles
+    const limit = Math.min(Number(req.query.limit) || 1000, Number(process.env.CYBERPULSE_MAX_NEWS) || 20000);
+    const articleRows = db.prepare(`
+      SELECT id, title, summary, source, severity, category, published_at, publish_date, read_time, url, fetched_at
+      FROM articles
+      ORDER BY fetched_at DESC
+      LIMIT ?
+    `).all(limit) as any[];
+
+    const articles = articleRows.map((row: any) => ({
+      id: row.id.toString(),
+      title: row.title,
+      summary: row.summary || '',
+      source: row.source,
+      severity: row.severity,
+      category: row.category,
+      publishedAt: row.published_at,
+      publishDate: row.publish_date,
+      readTime: row.read_time,
+      url: row.url,
+      fetchedAt: row.fetched_at,
+    }));
+
+    // Match articles to tech stack
+    const matches = matchArticlesToStack(articles, techStack);
+    const statistics = getStackStatistics(articles, techStack);
+
+    // Return matched articles with metadata
+    const news = matches.map(({ article, score, matchedTech }) => ({
+      ...article,
+      matchScore: score,
+      matchedTechnologies: matchedTech,
+    }));
+
+    res.json({ news, statistics });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

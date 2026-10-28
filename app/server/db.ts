@@ -15,7 +15,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const DB_PATH = path.resolve(DATA_DIR, 'cyberpulse.db');
 let db: Database.Database | null = null;
 
-const CURRENT_SCHEMA_VERSION = 7;
+const CURRENT_SCHEMA_VERSION = 8;
 
 export function getDb(): Database.Database {
   if (db) return db;
@@ -91,6 +91,17 @@ export function getDb(): Database.Database {
       state TEXT PRIMARY KEY,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS user_tech_stack (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      technology TEXT NOT NULL,
+      version TEXT,
+      vendor TEXT,
+      category TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tech_stack ON user_tech_stack(technology, version);
   `);
 
   /* One-time migrations */
@@ -170,6 +181,25 @@ export function getDb(): Database.Database {
     runV7();
     db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(7);
     console.log(`[DB] Migrated to schema v7: deactivated ${disabled} unreachable feeds`);
+  }
+
+  if (currentVersion < 8) {
+    /* v8: add user_tech_stack table for personalized news filtering based on
+       user's technology stack. Allows users to configure their infrastructure
+       (e.g., PHP 7.4, Apache 2.4) and receive only relevant security news. */
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_tech_stack (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        technology TEXT NOT NULL,
+        version TEXT,
+        vendor TEXT,
+        category TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_tech_stack ON user_tech_stack(technology, version);
+    `);
+    db.prepare(`INSERT OR REPLACE INTO schema_metadata (key, value) VALUES ('version', ?)`).run(8);
+    console.log('[DB] Migrated to schema v8: added user_tech_stack table');
   }
 
   return db;

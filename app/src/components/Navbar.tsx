@@ -1,7 +1,7 @@
-import { Newspaper, FileText, History } from 'lucide-react';
+import { Newspaper, FileText, History, Server } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export type TabId = 'news' | 'generate' | 'history';
+export type TabId = 'news' | 'my-stack' | 'generate' | 'history';
 
 interface TabConfig {
   id: TabId;
@@ -11,6 +11,7 @@ interface TabConfig {
 
 const tabs: TabConfig[] = [
   { id: 'news', label: 'News Feed', icon: <Newspaper size={16} /> },
+  { id: 'my-stack', label: 'My Stack', icon: <Server size={16} /> },
   { id: 'generate', label: 'Generate Post', icon: <FileText size={16} /> },
   { id: 'history', label: 'History', icon: <History size={16} /> },
 ];
