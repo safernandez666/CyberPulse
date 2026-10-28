@@ -30,6 +30,7 @@
 - [Running without Docker](#running-without-docker)
 - [How to add RSS sources](#how-to-add-rss-sources)
 - [Post directly to LinkedIn](#post-directly-to-linkedin)
+- [Personalized News with My Stack](#personalized-news-with-my-stack)
 - [Built-in RSS sources](#built-in-rss-sources-118-sources-101-active)
 - [Repository structure](#repository-structure)
 - [Additional documentation](#additional-documentation)
@@ -62,6 +63,7 @@ CyberPulse is a productivity tool for cybersecurity professionals who need to st
 
 - 📰 **118 built-in RSS feeds**, 101 enabled by default.
 - 🔥 **News feed** with filters by category, source, search, and sorting by date, severity or *trending*.
+- 🎯 **My Stack tab**: personalized news filtering based on your technology stack (Fortinet 7.0, PHP 7.4, Apache 2.4, etc.). Smart fuzzy matching finds variations, versions, and vendor names automatically.
 - 🕰️ **Reading windows**: last 24h, 7 days, 30 days, or everything. Source counts follow the window, and sources with nothing to show collapse out of the way.
 - ✍️ **Post generator** with 5 tones, 6 formats, and EN/ES support.
 - 🚀 **Post directly to LinkedIn** from the generator.
@@ -262,6 +264,35 @@ CyberPulse can publish generated posts straight to your personal LinkedIn feed. 
 </p>
 
 > **Note:** LinkedIn access tokens expire after approximately 60 days. If posting stops working, reconnect your account from Settings.
+
+---
+
+## Personalized News with My Stack
+
+CyberPulse can filter news based on your specific technology stack. Configure your infrastructure and receive only relevant security news for the technologies you actually use.
+
+### How it works
+
+1. Open **Settings** and go to **My Technology Stack**
+2. Add your technologies with optional version, vendor, and category:
+   - Technology: `Fortinet`, `PHP`, `Apache`, `WordPress`
+   - Version: `7.0`, `7.4`, `2.4.x`
+   - Vendor: `Fortinet`, `Apache Software Foundation`
+   - Category: `Firewall`, `CMS`, `Web Server`
+3. Click **My Stack** tab to see only relevant articles
+
+### Smart Fuzzy Matching
+
+The matching algorithm finds variations automatically:
+
+- **Technology variations**: `PHP` finds `php`, `php7`, `php8`, `php-fpm`
+- **Vendor names**: `Fortinet` finds `FortiOS`, `FortiGate`, `Fortinet`
+- **Version matching**: `7.4` matches `7.4.33`, `7.4.x`, `PHP 7.4`
+- **Scoring system**: Articles are ranked by relevance (version match, title appearance, severity)
+
+### Example
+
+With a stack of **Fortinet 7.0**, **PHP 7.4**, **Apache 2.4**, and **WordPress 6.2**, CyberPulse found **59 relevant articles from 667 total** (~9% precision), filtering out noise and showing only what matters to your infrastructure.
 
 ---
 
